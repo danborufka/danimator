@@ -11,12 +11,12 @@ module.exports = function(grunt) {
     },
     concat: {
         engine: {
-            options: { separator: ';' },
+            options: { separator: ';' + grunt.util.linefeed },
             src: ['src/engine/libs/*.js', 'src/engine/*.js'],
             dest: 'dist/js/Danimator.js'
         },
         editor: {
-            options: { separator: ';' },
+            options: { separator: ';' + grunt.util.linefeed },
             src: ['src/editor/libs/*.js','src/editor/*.js'],
             dest: 'build/js/Danimator.editor.js'
         },

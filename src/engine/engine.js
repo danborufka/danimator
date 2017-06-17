@@ -30,6 +30,29 @@ Object.defineProperty(Danimator, 'time', {
   }
 });
 
+/* retrieve sceneElement from DOM element, jQuery element, Paper.js item or Danimator sceneElement */
+Danimator.sceneElement = function danimatorSceneElement(element) {
+	if(element.$element) return element;
+	if(element instanceof jQuery) return element.data('sceneElement');
+	if(element instanceof HTMLElement) return $(element).data('sceneElement');
+	return _.get(element, 'data.sceneElement');
+}
+
+/** 
+ * data helper: limit number between two boundarie
+ * – like _.clamp except it accepts upper and lower border in arbitrary order 
+ * @example: Danimator.limit(5, 10, 0) will return 5 while _.clamp(5, 10, 0) will return 10.
+ */
+Danimator.limit = function(nr, mi, ma) {
+	if(mi > ma) {
+		var tweener = mi + 0;
+		mi = ma + 0;
+		ma = tweener + 0;
+		delete tweener;
+	}
+	return Math.max(Math.min(nr, ma), mi);
+}
+
 /* initializes a Danimator scene from the passed item and creates index of symbol defs */
 Danimator.init = function danimatorInit(item) {
 	item.data.sceneRoot = true;
@@ -56,12 +79,126 @@ Danimator.init = function danimatorInit(item) {
 	});
 }
 
-/* retrieve sceneElement from DOM element, jQuery element, Paper item or Danimator sceneElement */
-Danimator.sceneElement = function danimatorSceneElement(element) {
-	if(element.$element) return element;
-	if(element instanceof jQuery) return element.data('sceneElement');
-	if(element instanceof HTMLElement) return $(element).data('sceneElement');
-	return _.get(element, 'data.sceneElement');
+/* imports an SVG using Paper.js and turns it into a Danimator sceneElement */
+Danimator.import = function DanimatorImport(svgPath, optionsOrOnLoad) {
+	var _options = {};
+	var _onLoad;
+
+	if(typeof optionsOrOnLoad === 'object') {		// if second argument is a map
+		_options = optionsOrOnLoad;
+		_onLoad = optionsOrOnLoad.onLoad;
+	} else {										// if second argument is a function
+		_onLoad = optionsOrOnLoad;
+	}
+
+	_options.onLoad = function(item, svg) {
+		paper.$dom = $(svg);
+		
+		Danimator.init(item);
+
+		_onLoad && _onLoad.call(paper.scene);
+	};
+
+	paper.project.importSVG.call(paper.project, svgPath, _options);
+}
+
+/* load animations from external json */
+Danimator.load = function danimatorLoad(aniName) {
+	var filename = aniName + '.ani.json';
+
+	$.getJSON(filename, null, function(json, status) {
+		if(status === 'success') {
+			_.each(json, function(animatable, id) {
+				if(!isNaN(Number(id))) id = Number(id);
+				var item = paper.project.getItem({id: id});
+
+				if(item) 
+					_.each(animatable.properties, function(tracks, prop) {
+						_.each(tracks, function(track) {
+							Danimator.animate(item, prop, track.from, track.to, track.duration, track.options);
+						})
+					});
+			})
+		} else {
+			console.warn('Animations "' + filename + '" couldn\'t be loaded :(');
+		}
+	}).fail(function(promise, type, error){ console.error(error); });
+}
+
+/* calculate single step of animation */
+Danimator.step = function danimatorStep(animatable, progress) {
+	var value = _.get(animatable.item, animatable.property);
+
+	if(animatable.from == undefined) 		animatable.from = value;
+
+	if(typeof animatable.to === 'string') {		// if animatable.to is a String
+		if(!isNaN(animatable.to)) {				// yet contains a number
+			animatable.to = animatable.from + Number(animatable.to); 	// increment by that number instead
+		}
+	}
+
+	var ascending = animatable.to > animatable.from;	// check whether values are animated ascending or descending
+	var range 	  = animatable.to - animatable.from;	// calculate range of animation values
+	var isDone 	  = ascending ? 
+					value >= animatable.to : 
+					value <= animatable.to;
+	var newValue;
+
+	if(Danimator.interactive) {
+		isDone = false;
+	}
+
+	if(isDone) {
+		if(animatable.property === 'frame')
+			animatable.item.data._playing = false;
+	} else {
+		if(animatable.options.easing) {
+			/* Easing requires easing.js to be loaded, too */
+			try {
+				var easing = (typeof animatable.options.easing === 'string' ? Ease[animatable.options.easing] : animatable.options.easing);
+				if(easing) {
+					progress = easing(progress);
+				}
+			} catch(e) {
+				console.warn('Easing helpers not loaded!');
+			}
+		}
+
+		if(typeof animatable.from === 'string') {
+			if(progress >= 1) {
+				newValue = animatable.to;
+				isDone = Danimator.interactive;
+			} else {
+				newValue = animatable.from;
+			}
+		} else {
+			/* calculate new value and limit to "from" and "to" */
+			newValue = Danimator.limit(animatable.from + (range * progress), animatable.from, animatable.to);
+		}
+
+		/* animatable onStep hook to intervene on every step */
+		if(animatable.options.onStep) {
+			newValue = animatable.options.onStep(newValue, progress, animatable);
+		}
+
+		_.set(animatable.item, animatable.property, newValue);
+
+		// if we're animating a state force update by reassigning to itself (setState being called again)
+		if(animatable.property.match(/^state\.?/g)) {
+			animatable.item.state = animatable.item.state;
+		}
+
+		/* force-updating canvas drawing */
+		paper.project.view.requestUpdate();
+	}
+
+	/* global onStep hook to intervene on every step of every animation */
+	if(Danimator.onStep) Danimator.onStep(animatable, newValue);
+
+	return {
+		done: 	isDone,
+		value: 	newValue
+	};
 }
 
 /* core animation function (adds animation to animatable stack) */
@@ -163,129 +300,46 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 	};
 }
 
+/* basic frame animation support */
+Danimator.play = function danimatorPlay(item, options) {
+	var frames = item.frames;
+	var range  = frames - item.frame;
+	var duration = range / (options && options.fps || 12);	// calculate duration from fps and number of available frames
+
+	item.data._playing = true;
+	options.frameDuration = duration / range;				// calculating duration of single frame and passing it on for later reference
+
+	return Danimator(item, 'frame', item.frame, frames, duration, options);
+}
+
+/* interrupt frame animations */
+Danimator.stop = function danimatorStop(item) {
+	item.data._playing = false;
+}
+
+/* stop all animations on passed item */
+Danimator.stopAll = function danimatorStopAll(item) {
+	_.each(animations[item.id], function(ani, id){
+		clearTimeout(ani);
+		delete animations[id];
+	});
+	item.data._playing = false;
+	delete item.data._animate;
+};
+
+
+/**
+* like .animate() except .then() one waits for the last animation to complete. 
+* First argument is the animation method as String: "animate|fadeIn|fadeOut|morph|…"
+*/
 Danimator.then = function danimatorThen() {
 	var args = _.toArray(arguments);
 	var action = args.shift();
 	var newOptions = _.last(args);
 
-	Danimator._mergeDelays(this.options, newOptions);
+	newOptions.delay = _.get(newOptions, 'delay', 0) + ((this.options && this.options.delay) || 0);
 
 	return Danimator[action].apply(this, args);
-}
-
-Danimator.load = function danimatorLoad(aniName) {
-	var filename = aniName + '.ani.json';
-
-	$.getJSON(filename, null, function(json, status) {
-		if(status === 'success') {
-			_.each(json, function(animatable, id) {
-				if(!isNaN(Number(id))) id = Number(id);
-				var item = paper.project.getItem({id: id});
-
-				if(item) 
-					_.each(animatable.properties, function(tracks, prop) {
-						_.each(tracks, function(track) {
-							Danimator.animate(item, prop, track.from, track.to, track.duration, track.options);
-						})
-					});
-			})
-		} else {
-			console.warn('Animations "' + filename + '" couldn\'t be loaded :(');
-		}
-	}).fail(function(promise, type, error){ console.error(error); });
-}
-
-/* internal calculations */
-Danimator._mergeDelays = function(options, newOptions) {
-	newOptions.delay = _.get(newOptions, 'delay', 0) + ((options && options.delay) || 0);
-}
-
-/* limit number between two boundaries – like _.clamp except it accepts upper and lower border in arbitrary order */
-// example: Danimator.limit(5, 10, 0) will return 5 while _.clamp(5, 10, 0) will return 10.
-Danimator.limit = function(nr, mi, ma) {
-	if(mi > ma) {
-		var tweener = mi + 0;
-		mi = ma + 0;
-		ma = tweener + 0;
-		delete tweener;
-	}
-	return Math.max(Math.min(nr, ma), mi);
-}
-
-/* calculate single step of animation */
-Danimator.step = function danimatorStep(animatable, progress) {
-	var value = _.get(animatable.item, animatable.property);
-
-	if(animatable.from == undefined) 		animatable.from = value;
-
-	if(typeof animatable.to === 'string') {		// if animatable.to is a String
-		if(!isNaN(animatable.to)) {				// yet contains a number
-			animatable.to = animatable.from + Number(animatable.to); 	// increment by that number instead
-		}
-	}
-
-	var ascending = animatable.to > animatable.from;	// check whether values are animated ascending or descending
-	var range 	  = animatable.to - animatable.from;	// calculate range of animation values
-	var isDone 	  = ascending ? 
-					value >= animatable.to : 
-					value <= animatable.to;
-	var newValue;
-
-	if(Danimator.interactive) {
-		isDone = false;
-	}
-
-	if(isDone) {
-		if(animatable.property === 'frame')
-			animatable.item.data._playing = false;
-	} else {
-		if(animatable.options.easing) {
-			/* Easing requires easing.js to be loaded, too */
-			try {
-				var easing = (typeof animatable.options.easing === 'string' ? Ease[animatable.options.easing] : animatable.options.easing);
-				if(easing) {
-					progress = easing(progress);
-				}
-			} catch(e) {
-				console.warn('Easing helpers not loaded!');
-			}
-		}
-
-		if(typeof animatable.from === 'string') {
-			if(progress >= 1) {
-				newValue = animatable.to;
-				isDone = Danimator.interactive;
-			} else {
-				newValue = animatable.from;
-			}
-		} else {
-			/* calculate new value and limit to "from" and "to" */
-			newValue = Danimator.limit(animatable.from + (range * progress), animatable.from, animatable.to);
-		}
-
-		/* animatable onStep hook to intervene on every step */
-		if(animatable.options.onStep) {
-			newValue = animatable.options.onStep(newValue, progress, animatable);
-		}
-
-		_.set(animatable.item, animatable.property, newValue);
-
-		// if we're animating a state force update by reassigning to itself (setState being called again)
-		if(animatable.property.match(/^state\.?/g)) {
-			animatable.item.state = animatable.item.state;
-		}
-
-		/* force-updating canvas drawing */
-		paper.project.view.requestUpdate();
-	}
-
-	/* global onStep hook to intervene on every step of every animation */
-	if(Danimator.onStep) Danimator.onStep(animatable, newValue);
-
-	return {
-		done: 	isDone,
-		value: 	newValue
-	};
 }
 
 /* fx */
@@ -363,32 +417,6 @@ Danimator.morph = function danimatorMorph(fromItem, toItem, duration, options) {
 		}
 	});
 }
-
-/* basic frame animation support */
-Danimator.play = function danimatorPlay(item, options) {
-	var frames = item.frames;
-	var range  = frames - item.frame;
-	var duration = range / (options && options.fps || 12);	// calculate duration from fps and number of available frames
-
-	item.data._playing = true;
-	options.frameDuration = duration / range;				// calculating duration of single frame and passing it on for later reference
-
-	return Danimator(item, 'frame', item.frame, frames, duration, options);
-}
-
-/* interrupt frame animations */
-Danimator.stop = function danimatorStop(item) {
-	item.data._playing = false;
-}
-
-/* stop all animations on passed item */
-Danimator.stopAll = function danimatorStopAll(item) {
-	_.each(animations[item.id], function(ani, id){
-		clearTimeout(ani);
-		delete animations[id];
-	});
-	delete item.data._animate;
-};
 
 /* sound factory */
 Danimator.sound = function danimatorSound(name, options) {
@@ -483,14 +511,6 @@ Danimator.sound = function danimatorSound(name, options) {
 	return sound;
 };
 
-/* init values for Danimator props */
-Danimator.sounds 		= {};
-Danimator.interactive 	= false;					// interactive mode suppresses checks of animationEnd and thus never removes them from stack
-Danimator.startTime 	= (new Date).getTime();		// when did Danimator get initialized?
-Danimator.removeClip 	= true;						// if there's a clipping mask on the whole scene auto-remove it
-
-var _importSVG = paper.Project.prototype.importSVG;
-
 var _createDanimatorScene = function(parent) {
 	var tree = {
 		className: 'sceneElement'
@@ -580,31 +600,7 @@ var _createDanimatorScene = function(parent) {
 	return tree;
 };
 
-var _query = _.last(document.getElementsByTagName('script')).src.replace(/^[^\?]+\??/,'');
-
-/* hijacking Paper.js' importSVG method */
-paper.Project.prototype.importSVG = function importSVG(svgPath, optionsOrOnLoad) {
-	var _options = {};
-	var _onLoad;
-
-	if(typeof optionsOrOnLoad === 'object') {		// if second argument is a map
-		_options = optionsOrOnLoad;
-		_onLoad = optionsOrOnLoad.onLoad;
-	} else {										// if second argument is a function
-		_onLoad = optionsOrOnLoad;
-	}
-
-	_options.onLoad = function(item, svg) {
-		paper.$dom = $(svg);
-		
-		Danimator.init(item);
-
-		_onLoad && _onLoad.call(paper.scene);
-	};
-
-	_importSVG.call(this, svgPath, _options);
-}
-
+/* Paper.js injections */
 paper.Item.inject({
 	/* frame animation capability for Paper.js Items */
 	getFrame: function() {
@@ -704,3 +700,11 @@ paper.Item.inject({
 		return _.get(this.data, '_states', {});
 	},
 });
+
+/* init values for Danimator props */
+Danimator.sounds 		= {};
+Danimator.interactive 	= false;					// interactive mode suppresses checks of animationEnd and thus never removes them from stack
+Danimator.startTime 	= (new Date).getTime();		// when did Danimator get initialized?
+Danimator.removeClip 	= true;						// if there's a clipping mask on the whole scene auto-remove it
+
+var _scriptQuery = _.last(document.getElementsByTagName('script')).src.replace(/^[^\?]+\??/,'');

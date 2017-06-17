@@ -3,8 +3,11 @@ Advanced scalable vector graphics animations/interactions based on Paper.js
 
 ![scr-danimator-examples-1](https://user-images.githubusercontent.com/8395474/27254790-489d37b6-5390-11e7-89e2-8a3765e140e5.gif)
 
-Danimator will inject its setup process into Paper.js' `Project.importSVG` method.
-This will rename the imported SVG group to `scene` and create a `sceneElement` for it.
+Start by importing a SVG like so:
+```js
+Danimator.import(svg, options);
+```
+This will use [Paper.js to parse the SVG to canvas](http://paperjs.org/reference/project/#importsvg-svg), rename the imported group to `scene`, and create a `sceneElement` for it.
 
 ## scene
 The scene contains all named SVG items as nested properties.
