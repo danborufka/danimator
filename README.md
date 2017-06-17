@@ -3,7 +3,7 @@ Advanced scalable vector graphics animations/interactions based on Paper.js
 
 ![scr-danimator-examples-1](https://user-images.githubusercontent.com/8395474/27254790-489d37b6-5390-11e7-89e2-8a3765e140e5.gif)
 
-Start by importing a SVG like so:
+Start by importing an SVG like so:
 ```js
 Danimator.import(svg, options);
 ```
@@ -19,6 +19,11 @@ To change the opacity of `snout`'s Paper.js item, you'd do:
 ```js
 scene.bear.snout.item.opacity = 0.5;
 ```
+You can access scene elements using their according names, but use use `.ordered` if you need to access them numerically:
+```js
+scene.bear.ordered[0];  // this will access bear's first child
+```
+This setup also walks thru all SVG elements, [normalizes their names](), and hides all detected [states]() and [frames]() except for the first one.
 
 ## sceneElement
 sceneElements store two representations that can be accessed as properties:
@@ -38,5 +43,11 @@ $element | **.data('sceneElement')**
 
 ____
 … but you can always just use the helper method `Danimator.sceneElement(anyItem)` to retrieve its according `sceneElement` (if one exists)
+____
+
+Every sceneElement has a data store for easy data passing between jQuery elements and items inside PaperScript:
+```js
+scene.bear.data.hungriness = 0.8;
+```
 
 ### 
