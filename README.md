@@ -60,8 +60,8 @@ scene.bear.data.hungriness = 0.8;
 Takes the following arguments: `element`, `property`, `from`, `to`, `duration`, `options`
 argument | data type | description
 -|-|-
-element|_sceneElement_ or _paper.Item_|The sceneElement (or Paper.js item) to be animated
-property|_String_|The property to be animated
-from|_String_ or _Number_|Start value of the animation
-to|_String_ or _Number_|End value of the animation. Numeric Strings yield in relative addition/subtraction (like "+10" will yield the current value + 10)
-duration|_Number_|Duration of the animation in seconds
+element | _sceneElement_ or _paper.Item_ | The sceneElement (or Paper.js item) to be animated
+property | _String_|The property to be animated
+from | _String_ or _Number_| Start value of the animation
+to | _String_ or _Number_ | End value of the animation. Numeric Strings yield in relative addition/subtraction (like "+10" will yield the current value + 10)
+duration | _Number_ | Duration of the animation in seconds
