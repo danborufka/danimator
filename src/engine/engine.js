@@ -492,7 +492,9 @@ Danimator.removeClip 	= true;						// if there's a clipping mask on the whole sc
 var _importSVG = paper.Project.prototype.importSVG;
 
 var _createDanimatorScene = function(parent) {
-	var tree = {};
+	var tree = {
+		className: 'sceneElement'
+	};
 
 	// save (non-enumerable) reference to Paper.js item
 	Object.defineProperty(tree, 'item', { enumerable: false, writable: false, configurable: false, 
@@ -577,6 +579,8 @@ var _createDanimatorScene = function(parent) {
 		});
 	return tree;
 };
+
+var _query = _.last(document.getElementsByTagName('script')).src.replace(/^[^\?]+\??/,'');
 
 /* hijacking Paper.js' importSVG method */
 paper.Project.prototype.importSVG = function importSVG(svgPath, optionsOrOnLoad) {
