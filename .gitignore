@@ -59,3 +59,6 @@ typings/
 
 # node server for Danimator saving
 server/
+
+# ignore all dirs starting with underscore
+_*/
