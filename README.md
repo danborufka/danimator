@@ -58,6 +58,7 @@ scene.bear.data.hungriness = 0.8;
 
 ### Danimator.animate(…)
 Takes the following arguments: `element`, `property`, `from`, `to`, `duration`, `options`
+
 argument | data type | description
 -|-|-
 element | _sceneElement_ or _paper.Item_ | The sceneElement (or Paper.js item) to be animated
