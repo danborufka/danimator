@@ -32,7 +32,7 @@ Object.defineProperty(Danimator, 'time', {
 
 /* retrieve sceneElement from DOM element, jQuery element, Paper.js item or Danimator sceneElement */
 Danimator.sceneElement = function danimatorSceneElement(element) {
-	if(element.$element) return element;
+	if(element.className === 'sceneElement') return element;
 	if(element instanceof jQuery) return element.data('sceneElement');
 	if(element instanceof HTMLElement) return $(element).data('sceneElement');
 	return _.get(element, 'data.sceneElement');
@@ -260,6 +260,8 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 			})
 		}
 	}
+
+	item = Danimator.sceneElement(item).item;
 
 	// ### TODO: change initVal here if necessary
 	/* setTimeout to cover delay parameter */
