@@ -30,4 +30,6 @@ element | access to sceneElement
 item | **.data.sceneElement**
 $element | **.data('sceneElement')**
 
+… but you can always just use the helper method `Danimator.sceneElement(anyItem)` to retrieve its according `sceneElement` (if one exists)
+
 ### 
