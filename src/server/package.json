@@ -1,0 +1,21 @@
+{
+  "name": "danimator-server",
+  "version": "1.0.0",
+  "description": "Server to handle instant saving of animations",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Danimator"
+  ],
+  "author": "Dan Borufka",
+  "license": "ISC",
+  "dependencies": {
+    "cli-color": "^1.2.0",
+    "fs": "0.0.1-security",
+    "http": "0.0.0",
+    "md5": "^2.2.1",
+    "url": "^0.11.0"
+  }
+}

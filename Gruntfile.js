@@ -5,30 +5,30 @@ module.exports = function(grunt) {
 
     sass: {
         editor: {
-            src: 'css/source/Danimator.editor.scss',
-            dest: 'css/source/Danimator.editor.css'
+            src: 'src/editor/editor.scss',
+            dest: 'build/css/editor.css'
         }
     },
     concat: {
-        main: {
+        engine: {
             options: { separator: ';' },
-            src: 'js/source/*.js',
-            dest: 'js/Danimator.js'
+            src: ['src/engine/libs/*.js', 'src/engine/*.js'],
+            dest: 'dist/js/Danimator.js'
         },
         editor: {
             options: { separator: ';' },
-            src: 'js/source/editor/*.js',
-            dest: 'js/Danimator.editor.js'
+            src: ['src/editor/libs/*.js','src/editor/*.js'],
+            dest: 'build/js/Danimator.editor.js'
         },
         styles: {
-            src: 'css/source/*.css',
-            dest: 'css/Danimator.editor.css'
+            src: ['src/editor/libs/*.css', 'build/css/editor.css'],
+            dest: 'build/css/Danimator.editor.css'
         }
     },
     cssmin: {
         editor: {
-            src: 'css/Danimator.editor.css',
-            dest:'css/Danimator.editor.min.css'
+            src: 'build/css/Danimator.editor.css',
+            dest:'dist/css/Danimator.editor.min.css'
         }
     },
     uglify: {
@@ -38,32 +38,25 @@ module.exports = function(grunt) {
             mangle: true,
             sourceMap: true
         },
-        target: {
-            files: {
-                'js/Danimator.min.js': ['js/Danimator.js'],
-                'js/game.min.js': ['js/game.js']
-                //,'js/Danimator.editor.min.js': ['js/Danimator.editor.js']
-            }
-        }
+        engine: { files: {'dist/js/Danimator.min.js': ['dist/js/Danimator.js'] }},
+        editor: { files: {'dist/js/Danimator.editor.min.js': ['build/js/Danimator.editor.js'] }, options: { sourceMap: false }}
     },
     watch: {
-      scripts: {
-        files: ['js/source/*/*.js', 'js/source/*.js'],
-        tasks: ['concat:main', 'concat:editor', 'uglify']
+      engine: {
+        files: ['src/engine/*.js', 'src/engine/*/*.js'],
+        tasks: ['concat:engine', 'uglify:engine']
       },
-      games: {
-        files: ['js/game.js'],
-        tasks: ['concat:main', 'concat:editor', 'uglify']
+      editor: {
+        files: ['src/editor/*.js', 'src/editor/*/*.js'],
+        tasks: ['concat:editor', 'uglify:editor']
       },
       styles: {
-        files: ['css/source/*.scss'],
+        files: ['src/editor/*.scss'],
         tasks: ['sass', 'concat:styles', 'cssmin']
       }
     }
-
   });
 
   require('load-grunt-tasks')(grunt);
-  grunt.registerTask('default', 'watch');
-
+  grunt.registerTask('default', ['sass', 'concat', 'cssmin', 'uglify', 'watch']);
 };
