@@ -1,11 +1,10 @@
 /* animation engine */
 // TODOS:
-// o make Danimator own repo
 // o make audio a separate, optional module
 // o test morph chaining
 // o make states animatable thru morphs
 
-/* check dependencies */
+/* check of dependencies */
 var missing;
 try {
 	missing = 'lodash'; 	_.VERSION;
@@ -16,7 +15,7 @@ try {
 
 var animations = [];
 
-/* create Danimator as main object and in the same time shortcut to Danimator.animate */
+/* create Danimator as main object and, at the same time, as shortcut to Danimator.animate */
 if(!this.Danimator) {
 	Danimator = function Danimator() { return Danimator.animate.apply(Danimator, arguments); };
 }

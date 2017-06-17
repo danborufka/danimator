@@ -6,7 +6,6 @@
 // o fix _states of subitems
 // ø load files properly on "bodyDrop"
 // o #keyframes panel: fix prefilling of segment points and handles
-// o add arrow hotkeys to adapt positions
 // o #keyframes panel: add record mode incl. button
 // o check layers vs. groups (reimport from Illu)
 // o saving of SVGs once properties have been changed
@@ -29,7 +28,8 @@ var keyItemTemplate;
 var propItemTemplate;
 var audioTemplate;
 
-var selection = new Set;
+// create special set for selections within our scene
+var selectedElements = sceneSelection();
 
 var $time;
 var $animationValue;
@@ -241,17 +241,11 @@ function _getAnimationName(item, property, type) {
 }
 /* internal helper to deselect all paperJS items and update panels accordingly */
 function _resetSelection() {
-
-	currentGame.project.deselectAll();
-
 	$('#layers')
 		.find('.layer').removeClass('selected').end()
 		.find('ul.main').scrollTop(0);
 
-	selection.forEach(function(selectedElement){
-		selectedElement.data.$layer.removeClass('open');
-	});
-	selection.clear();
+	selectedElements.unselect(currentGame.project);
 	_anchorViz.visible = false;
 
 	var emptyState = _.template(_.unescape($('#property-panel-empty-item')[0].content.children[0].outerHTML));
@@ -424,7 +418,7 @@ Danimator.load = function danimatorLoad(aniName) {
 
 /* update properties panel on every step of the animation */
 Danimator.onStep = function danimatorStep(animatable, value) {
-	if(selection.has(Danimator.sceneElement(animatable.item))) {
+	if(selectedElements.has(Danimator.sceneElement(animatable.item))) {
 		_changesProp(animatable.property, value);
 	}
 }
@@ -515,7 +509,7 @@ jQuery(function($){
 			$keyframesPanel.toggleClass('hasSelection', selected);
 
 			if(selected) {
-				selection.add( Danimator.sceneElement($layer) );
+				selectedElements.add( Danimator.sceneElement($layer) );
 
 				/* update title of property panel and trigger refresh */
 				$propertiesPanel.find('.type').text(' OF ' + event.item.className + ' ' + (event.item.name || ''));
@@ -711,15 +705,13 @@ jQuery(function($){
 		})
 		/* interactivity of property inputs */
 		.on('change', '#properties :input', function() {
-			var hasSelection = _firstFromSet(selection);
-
-			if(hasSelection) {
+			if(selectedElements.size) {
 				var $this 	 = $(this);
 				var prop  	 = $this.data('prop');
 				var data 	 = $this.closest('li').data();
 				var oldValue = $this.data('oldValue') || this.defaultValue;
 				var value 	 = $this.is(':checkbox') ? $this.is(':checked') : $this.val();
-				var item  	 = hasSelection.item;
+				var item  	 = selectedElements.single.item;
 				var segmentProp = false;
 				var props 	 = {};
 				var converter;
@@ -783,7 +775,7 @@ jQuery(function($){
 				}, label);
 
 				if(data.track) {
-					var itemId = _firstFromSet(selection).item.id;
+					var itemId = selectedElements.single.item.id;
 					var currentTrack = tracks[itemId].properties[prop][data.track.id];
 
 					if(Danimator.time === _getStartTime(currentTrack)) {
@@ -850,6 +842,36 @@ jQuery(function($){
 			delete draggingMaster;
 			$animationValue.text('');
 		})
+		/* keydown for continuous hotkeys outside of alphanumeric range */
+		.on('keydown', function(event) {
+			if(!$(event.target).is(':input,[contenteditable]')) {
+
+				var dirX = 0, dirY = 0;
+
+				switch(event.key) {
+					/* movement of elements */
+					case 'ArrowLeft': 	dirX = -1; 	break;
+					case 'ArrowRight': 	dirX = +1; 	break;
+					case 'ArrowUp': 	dirY = -1; 	break;
+					case 'ArrowDown': 	dirY = +1; 	break;
+				}
+
+				// if we have a direction given (thru arrowKeys)
+				if((dirX + dirY) !== 0) {
+					var element;
+
+					// move the element according to dirX and dirY
+					if(element = selectedElements.single) {
+						// 10x movement with shift
+						if(event.shiftKey) {
+							dirX *= 10;
+							dirY *= 10;
+						}	
+						element.item.position = element.item.position.add( new paper.Point(dirX, dirY) );
+					}
+				}
+			}
+		})
 		/* keyup for "trigger" hotkeys, keypress for continuous hotkeys */
 		.on('keyup', function(event) {
 			if(!$(event.target).is(':input,[contenteditable]')) {
@@ -895,12 +917,12 @@ jQuery(function($){
 						}
 						break;
 					case 'o':
-						if(selection.size) {
+						if(selectedElements.size) {
 							$('#properties input[data-prop=opacity]').focus()[0].select();
 						}
 						break;
 					case 'r':
-						if(selection.size) {
+						if(selectedElements.size) {
 							$('#properties input[data-prop=rotation]').focus()[0].select();
 						}
 						break;
@@ -911,14 +933,13 @@ jQuery(function($){
 							event.stopImmediatePropagation();
 						}
 						break;
-					case 'ArrowLeft':
-						_firstFromSet(selection);
-						break;
 				}
 			}
 		})
 		.on('keypress', function(event) {
 			if(!$(event.target).is(':input,[contenteditable]')) {
+				var cmdKey = event.ctrlKey || event.metaKey;
+
 				switch(event.key) {
 					/* prevFrame */
 					case ',':
@@ -948,16 +969,12 @@ jQuery(function($){
 						return false;
 					/* undo */
 					case 'z':
-						if(event.ctrlKey || event.metaKey) {
-							history.back();
-						}
-						break;
+						if(cmdKey) history.back();
+						return false;
 					/* redo */
 					case 'y':
-						if(event.ctrlKey || event.metaKey) {
-							history.forward();
-						}
-						break;
+						if(cmdKey) history.forward();
+						return false;
 				}
 			} else {
 				if(event.key === 'Enter') {
@@ -1502,7 +1519,7 @@ Game.onLoad = function(project, name, options) {
 				currentTrack.property 	= property;
 
 				if(hasActives) {
-					if(selection.has(sceneElement)) {
+					if(selectedElements.has(sceneElement)) {
 						$inputs.find('input[data-prop="' + property + '"]').parent().addClass('keyed');
 					}
 				}
@@ -1608,8 +1625,9 @@ Game.onLoad = function(project, name, options) {
 	paper.view.onMouseDrag = function onCanvasMouseDrag(event) {
 		if(event.event.button === 0)
 			if(event.event.metaKey) {
-				if(selection.size) {
-					var selectedItem = _firstFromSet(selection).item;
+				if(selectedElements.size) {
+					console.log('selectedElements', selectedElements);
+					var selectedItem = selectedElements.single.item;
 					selectedItem.position = selectedItem.position.add(event.delta);
 
 					_changesFile('ani.json');
@@ -1684,7 +1702,7 @@ Game.onLoad = function(project, name, options) {
 		/* move anchor point onAltKey */
 		if(event.event.altKey) {
 			this.position = event.point;
-			_firstFromSet(selection).item.pivot = this.position;
+			selectedElements.single.item.pivot = this.position;
 			_changesProp('pivot.x', this.position.x);
 			_changesProp('pivot.y', this.position.y);
 		}
@@ -1692,7 +1710,7 @@ Game.onLoad = function(project, name, options) {
 
 	_anchorViz.onMouseUp = function(event) {
 		var item = this;
-		var selectedItem = _firstFromSet(selection).item;
+		var selectedItem = selectedElements.single.item;
 
 		if(event.event.altKey)
 			new Undoable(function(){ 
