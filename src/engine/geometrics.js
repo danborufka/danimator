@@ -1,4 +1,6 @@
-// geometric helpers for paperJS items
+/** 
+ * Geometric helpers for paperJS items
+ */
 
 paper.Path.inject({
 	/* 	add growth property to paths so you can animate the "evolution" of a path 

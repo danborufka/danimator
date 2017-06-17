@@ -1,15 +1,6 @@
 /* animation editor engine */
 // TODOS:
-// o finish save statii
-// o #keyframes panel: making ani labels editable
-// o fix scroll of panels
-// o fix _states of subitems
-// ø load files properly on "bodyDrop"
-// o #keyframes panel: fix prefilling of segment points and handles
-// o #keyframes panel: add record mode incl. button
 // o check layers vs. groups (reimport from Illu)
-// o saving of SVGs once properties have been changed
-// o performance: use _createTrack, _createProp, and _createLayer for single elements rather than rerendering the whole panel every time
 
 var tracks   		= {};
 var events 			= {};

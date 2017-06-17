@@ -1,4 +1,6 @@
-/* internal helper of editor for easier handling of global selection in paper scene */
+/** 
+ * Internal helper for easier handling of global selection(s) in our Paper.js scene
+ */
 
 sceneSelection = function sceneSelection(elements) {
 	var _selection = new Set;

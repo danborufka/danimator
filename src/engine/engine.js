@@ -1,8 +1,6 @@
-/* animation engine */
-// TODOS:
-// o make audio a separate, optional module
-// o test morph chaining
-// o make states animatable thru morphs
+/** 
+ * Main animation engine 
+ */
 
 /* check of dependencies */
 var missing;
@@ -58,7 +56,7 @@ Danimator.init = function danimatorInit(item) {
 	});
 }
 
-/* retrieve sceneElement from DOM element, jQuery element, paper item or Danimator sceneElement */
+/* retrieve sceneElement from DOM element, jQuery element, Paper item or Danimator sceneElement */
 Danimator.sceneElement = function danimatorSceneElement(element) {
 	if(element.$element) return element;
 	if(element instanceof jQuery) return element.data('sceneElement');
@@ -496,7 +494,7 @@ var _importSVG = paper.Project.prototype.importSVG;
 var _createDanimatorScene = function(parent) {
 	var tree = {};
 
-	// save (non-enumerable) reference to paperjs item
+	// save (non-enumerable) reference to Paper.js item
 	Object.defineProperty(tree, 'item', { enumerable: false, writable: false, configurable: false, 
 		value: 	parent 
 	});
@@ -580,7 +578,7 @@ var _createDanimatorScene = function(parent) {
 	return tree;
 };
 
-/* hijacking paper's importSVG method */
+/* hijacking Paper.js' importSVG method */
 paper.Project.prototype.importSVG = function importSVG(svgPath, optionsOrOnLoad) {
 	var _options = {};
 	var _onLoad;
@@ -604,7 +602,7 @@ paper.Project.prototype.importSVG = function importSVG(svgPath, optionsOrOnLoad)
 }
 
 paper.Item.inject({
-	/* frame animation capability for paperjs Items */
+	/* frame animation capability for Paper.js Items */
 	getFrame: function() {
 		if(!this.data._frame) {
 			this.data._frame = 1;
@@ -641,7 +639,7 @@ paper.Item.inject({
 	},
 	/* state capability – switch visibility of children layers on and off using meaningful labels */
 	getState: function() {
-		// accept childname as first argument (but do it in hindsight for paper to pickup getter and setter properly)
+		// accept childname as first argument (but do it in hindsight for Paper.js to pickup getter and setter properly)
 		if(typeof arguments[0] === 'string') {
 			return _.get(this.data, '_state.' + arguments[0], false);
 		}
