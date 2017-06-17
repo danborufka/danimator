@@ -23,12 +23,14 @@ property | description
 **.item** | Reference to the rendered Paper.js item
 **.$element** | Reference to the jQuery element of the SVG as parsed DOM
 
+
 Both `item` and `$element` have references to this `sceneElement` in their data property.
 
 element | access to sceneElement
 -|-
 item | **.data.sceneElement**
 $element | **.data('sceneElement')**
+
 
 … but you can always just use the helper method `Danimator.sceneElement(anyItem)` to retrieve its according `sceneElement` (if one exists)
 
