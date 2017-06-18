@@ -9,7 +9,10 @@ Start by importing an **SVG** like so:
 ```js
 Danimator.import(svg, options);
 ```
-This will use [Paper.js to parse the SVG to canvas](http://paperjs.org/reference/project/#importsvg-svg), rename the imported group to [`scene`](#scene), and create a [`sceneElement`](#sceneelement) for it.
+This will use [Paper.js to parse the SVG to canvas](http://paperjs.org/reference/project/#importsvg-svg), rename the imported group to [`scene`](#scene), and create a [`sceneElement`](#sceneelement) for it. You can either pass a callback as  second parameters or a map with an _onLoad_ property to be executed once the SVG has been imported. onLoad will retrieve the parsed [scene](#scene) as parameter.
+```js
+Danimator.import(svg, (scene) => { scene.bear.item.strokeColor = 'yellow'; });
+```
 
 ## The Basics
 
