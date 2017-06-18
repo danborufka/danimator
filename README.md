@@ -53,7 +53,10 @@ Every sceneElement has a data store for easy data passing between jQuery element
 ```js
 scene.bear.data.hungriness = 0.8;
 ```
-sceneElement **.find** is a helper to find deeply nested elements within elements. 
+sceneElement **.find** is a helper to find deeply nested elements within elements:
+ ```js
+scene.bear.find("eyebrow-left").visible = false;
+```
 
 ### Normalized Element Names
 Illustrator generates a unique id for each element when exporting to SVG. This means that while the two elements named "dog" and "cat" each have a subelement named "nose" in Illustrator, the exported SVG will have one of them contain a "nose_1" or "nose_2" for the sake of unique names. This makes selecting elements by name cumbersome. Danimator **normalizes** those names back to what they were, and lets you choose which one to use ("nose" will return all elements originally named "nose", while "nose_2" will only select that one specific one).
