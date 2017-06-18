@@ -27,7 +27,7 @@ You can access scene elements using their according names, but use `.ordered` if
 ```js
 scene.bear.ordered[0];  // this will access bear's first child
 ```
-This setup also walks thru all SVG elements, [normalizes their names](#normalzedelementnames), and hides all detected [states](#states) and [frames](#frames) except for the first one.
+This setup also walks thru all SVG elements, [normalizes their names](#normalized-element-names), and hides all detected [states](#states) and [frames](#frames) except for the first one.
 
 ### sceneElement
 sceneElements store two representations that can be accessed as properties:
@@ -82,4 +82,4 @@ property | _String_| The property to be animated | "opacity"
 from | _String_ or _Number_| Start value of the animation. Use null to use the current value | 0.5
 to | _String_ or _Number_ | End value of the animation. Numeric Strings yield in relative addition/subtraction (like "+10" will yield the current value + 10) | 1
 duration | _Number_ | Duration of the animation in seconds | 1.5
-options | _Object_ | Configure the animation. | { delay: 1 }
+options | _Object_ | [Configure the animation.](#animation-options) | { delay: 1 }
