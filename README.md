@@ -5,13 +5,13 @@ Advanced scalable vector graphics animations/interactions based on Paper.js
 
 ## Usage
 
-Start by importing an SVG like so:
+Start by importing an **SVG** like so:
 ```js
 Danimator.import(svg, options);
 ```
-This will use [Paper.js to parse the SVG to canvas](http://paperjs.org/reference/project/#importsvg-svg), rename the imported group to `scene`, and create a `sceneElement` for it.
+This will use [Paper.js to parse the SVG to canvas](http://paperjs.org/reference/project/#importsvg-svg), rename the imported group to [`scene`](#scene), and create a [`sceneElement`](#sceneelement) for it.
 
-## Basics
+## The Basics
 
 ### scene
 The scene contains all named SVG items as nested properties.
@@ -27,7 +27,7 @@ You can access scene elements using their according names, but use `.ordered` if
 ```js
 scene.bear.ordered[0];  // this will access bear's first child
 ```
-This setup also walks thru all SVG elements, [normalizes their names](), and hides all detected [states]() and [frames]() except for the first one.
+This setup also walks thru all SVG elements, [normalizes their names](#normalzedelementnames), and hides all detected [states](#states) and [frames](#frames) except for the first one.
 
 ### sceneElement
 sceneElements store two representations that can be accessed as properties:
@@ -46,23 +46,37 @@ item | **.data.sceneElement**
 $element | **.data('sceneElement')**
 
 ____
-… but you can always just use the helper method `Danimator.sceneElement(anyItem)` to retrieve its according `sceneElement` (if one exists)
+… but you can always just use the helper method `Danimator.sceneElement( anyItem )` to retrieve its according `sceneElement` (if one exists)
 ____
 
 Every sceneElement has a data store for easy data passing between jQuery elements and items inside PaperScript:
 ```js
 scene.bear.data.hungriness = 0.8;
 ```
+sceneElement**.find** is a helper to find deeply nested elements within elements. 
+
+### Normalized Element Names
+Illustrator generates a unique id for each element when exporting to SVG. This means that while the two elements named "dog" and "cat" each have a subelement named "nose" in Illustrator, the exported SVG will have one of them contain a "nose_1" or "nose_2" for the sake of uniqueness. This makes selecting elements by name cumbersome. Danimator **normalizes** those names back to what they were, and lets you choose which one to use ("nose" will return all elements originally named "nose", while "nose_2" will only select that specificone).
 
 ## Animating
 
-### Danimator.animate(…)
-Takes the following arguments: `element`, `property`, `from`, `to`, `duration`, `options`
+### Animation options
+All animation methods accept an options map as last parameter. You may configure the following options:
 
-argument | data type | description
--|-|-
-element | _sceneElement_ or _paper.Item_ | The sceneElement (or Paper.js item) to be animated
-property | _String_|The property to be animated
-from | _String_ or _Number_| Start value of the animation
-to | _String_ or _Number_ | End value of the animation. Numeric Strings yield in relative addition/subtraction (like "+10" will yield the current value + 10)
-duration | _Number_ | Duration of the animation in seconds
+option | data type | description | example
+-|-|-|-
+delay | _Number_ | How long to wait before starting the animation (in s) | 2
+onDone | _Function_|_String_ | Callback to be run once the animation is done. Use one of the strings "reverse", "loop", or "pingpong" to repeat the animation automatically. | "reverse"
+onLoop | _Function_ | If you supplied a String to onDone, this provides a callback for every iteration of a loop | -
+
+### Danimator.animate(…)
+Takes the following arguments: `element`, `property`, `[from=null]`, `[to=1]`, `[duration=1]`, `[options]`
+
+argument | data type | description | example
+-|-|-|-
+element | [_sceneElement_](#sceneelement) or _paper.Item_ | The sceneElement (or Paper.js item) to be animated | scene.bear
+property | _String_| The property to be animated | "opacity"
+from | _String_ or _Number_| Start value of the animation. Use null to use the current value | 0.5
+to | _String_ or _Number_ | End value of the animation. Numeric Strings yield in relative addition/subtraction (like "+10" will yield the current value + 10) | 1
+duration | _Number_ | Duration of the animation in seconds | 1.5
+options | _Object_ | Configure the animation. | { delay: 1 }
