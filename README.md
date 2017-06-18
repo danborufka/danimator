@@ -53,10 +53,10 @@ Every sceneElement has a data store for easy data passing between jQuery element
 ```js
 scene.bear.data.hungriness = 0.8;
 ```
-sceneElement**.find** is a helper to find deeply nested elements within elements. 
+sceneElement **.find** is a helper to find deeply nested elements within elements. 
 
 ### Normalized Element Names
-Illustrator generates a unique id for each element when exporting to SVG. This means that while the two elements named "dog" and "cat" each have a subelement named "nose" in Illustrator, the exported SVG will have one of them contain a "nose_1" or "nose_2" for the sake of uniqueness. This makes selecting elements by name cumbersome. Danimator **normalizes** those names back to what they were, and lets you choose which one to use ("nose" will return all elements originally named "nose", while "nose_2" will only select that specificone).
+Illustrator generates a unique id for each element when exporting to SVG. This means that while the two elements named "dog" and "cat" each have a subelement named "nose" in Illustrator, the exported SVG will have one of them contain a "nose_1" or "nose_2" for the sake of unique names. This makes selecting elements by name cumbersome. Danimator **normalizes** those names back to what they were, and lets you choose which one to use ("nose" will return all elements originally named "nose", while "nose_2" will only select that one specific one).
 
 ## Animating
 
@@ -66,10 +66,10 @@ All animation methods accept an options map as last parameter. You may configure
 option | data type | description | example
 -|-|-|-
 delay | _Number_ | How long to wait before starting the animation (in s) | 2
-onDone | _Function_|_String_ | Callback to be run once the animation is done. Use one of the strings "reverse", "loop", or "pingpong" to repeat the animation automatically. | "reverse"
+onDone | _Function_ or _String_ | Callback to be run once the animation is done. Use one of the strings "reverse", "loop", or "pingpong" to repeat the animation automatically. | "reverse"
 onLoop | _Function_ | If you supplied a String to onDone, this provides a callback for every iteration of a loop | -
 
-### Danimator.animate(…)
+### Danimator _.animate(…)_
 Takes the following arguments: `element`, `property`, `[from=null]`, `[to=1]`, `[duration=1]`, `[options]`
 
 argument | data type | description | example
