@@ -11,7 +11,7 @@ Danimator.import(svg, options);
 ```
 This will use [Paper.js to parse the SVG to canvas](http://paperjs.org/reference/project/#importsvg-svg), rename the imported group to [`scene`](#scene), and create a [`sceneElement`](#sceneelement) for it. You can either pass a callback as  second parameters or a map with an _onLoad_ property to be executed once the SVG has been imported. onLoad will retrieve the parsed [scene](#scene) as parameter.
 ```js
-Danimator.import(svg, (scene) => { scene.bear.item.strokeColor = 'yellow'; });
+Danimator.import(svg, (scene) => scene.bear.item.strokeColor = 'yellow');
 ```
 
 ## The Basics
@@ -31,6 +31,7 @@ You can access scene elements using their according names, but use `.ordered` if
 scene.bear.ordered[0];  // this will access bear's first child
 ```
 This setup also walks thru all SVG elements, [normalizes their names](#normalized-element-names), and hides all detected [states](#states) and [frames](#frames) except for the first one.
+
 
 ### sceneElement
 sceneElements store two representations that can be accessed as properties:
@@ -52,14 +53,16 @@ ____
 … but you can always just use the helper method `Danimator.sceneElement( anyItem )` to retrieve its according `sceneElement` (if one exists)
 ____
 
-Every sceneElement has a data store for easy data passing between jQuery elements and items inside PaperScript:
-```js
-scene.bear.data.hungriness = 0.8;
-```
 sceneElement **.find** is a helper to find deeply nested elements within elements:
  ```js
 scene.bear.find("eyebrow-left").visible = false;
 ```
+
+Every sceneElement has a data store for easy data passing between jQuery elements and items inside PaperScript:
+```js
+scene.bear.data.hungriness = 0.8;
+```
+
 
 ### Normalized Element Names
 Illustrator generates a unique id for each element when exporting to SVG. This means that while the two elements named "dog" and "cat" each have a subelement named "nose" in Illustrator, the exported SVG will have one of them contain a "nose_1" or "nose_2" for the sake of unique names. This makes selecting elements by name cumbersome. Danimator **normalizes** those names back to what they were, and lets you choose which one to use ("nose" will return all elements originally named "nose", while "nose_2" will only select that one specific one).
