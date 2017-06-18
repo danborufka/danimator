@@ -15,7 +15,7 @@ This will use [Paper.js to parse the SVG to canvas](http://paperjs.org/reference
 
 ### scene
 The scene contains all named SVG items as nested properties.
-This means if you have a SVG with a group named `bear` containing a path called `snout`, you can access it like this: 
+This means that if you have an SVG with a group named `bear` containing a path called `snout`, you can access it like this: 
 ```js
 scene.bear.snout
 ```
