@@ -13,6 +13,7 @@ This will use [Paper.js to parse the SVG to canvas](http://paperjs.org/reference
 ```js
 Danimator.import(svg, (scene) => scene.bear.item.strokeColor = 'yellow');
 ```
+This scene will also store all named symbolDefinitions inside its property `.symbols`.
 
 ## The Basics
 
@@ -89,3 +90,10 @@ from | _String_ or _Number_| Start value of the animation. Use null to use the c
 to | _String_ or _Number_ | End value of the animation. Numeric Strings yield in relative addition/subtraction (like "+10" will yield the current value + 10) | 1
 duration | _Number_ | Duration of the animation in seconds | 1.5
 options | _Object_ | [Configure the animation.](#animation-options) | { delay: 1 }
+
+Every animation returns a handler with the following properties:
+property | description
+- | -
+then | shortcut for Danimator_.then(…)_
+options | original options passed to Danimator_.animate(…)_
+stop | used to prevent delayed animation from happening
