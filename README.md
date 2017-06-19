@@ -92,6 +92,7 @@ duration | _Number_ | Duration of the animation in seconds | 1.5
 options | _Object_ | [Configure the animation.](#animation-options) | { delay: 1 }
 
 Every animation returns a handler with the following properties:
+
 property | description
 - | -
 then | shortcut for Danimator_.then(…)_
