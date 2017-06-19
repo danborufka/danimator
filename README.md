@@ -80,7 +80,8 @@ onDone | _Function_ or _String_ | Callback to be run once the animation is don
 onLoop | _Function_ | If you supplied a String to onDone, this provides a callback for every iteration of a loop | -
 
 ### Danimator _.animate(…)_
-Takes the following arguments: `element`, `property`, `[from=null]`, `[to=1]`, `[duration=1]`, `[options]`
+#### Parameters
+`element`, `property`, `[from=null]`, `[to=1]`, `[duration=1]`, `[options]`
 
 argument | data type | description | example
 -|-|-|-
@@ -91,7 +92,8 @@ to | _String_ or _Number_ | End value of the animation. Numeric Strings yield in
 duration | _Number_ | Duration of the animation in seconds | 1.5
 options | _Object_ | [Configure the animation.](#animation-options) | { delay: 1 }
 
-Every animation returns a handler with the following properties:
+#### Returns
+A handler with the following properties:
 
 property | description
 -|-
