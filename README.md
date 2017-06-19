@@ -94,7 +94,7 @@ options | _Object_ | [Configure the animation.](#animation-options) | { delay:
 Every animation returns a handler with the following properties:
 
 property | description
-- | -
+-|-
 then | shortcut for Danimator_.then(…)_
 options | original options passed to Danimator_.animate(…)_
 stop | used to prevent delayed animation from happening
