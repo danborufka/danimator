@@ -97,6 +97,6 @@ A handler with the following properties:
 
 property | description
 -|-
-then | shortcut for Danimator_.then(…)_
-options | original options passed to Danimator_.animate(…)_
+then | shortcut for Danimator.then(…)
+options | original options passed to Danimator.animate(…)
 stop | used to prevent delayed animation from happening
