@@ -3,6 +3,7 @@
 var pi2 = Math.PI*2;
 
 Ease = {
+	constant: 	parseInt,
 	linear: 	function(t) { return t; 					},
 	cubicIn: 	function(t) { return Math.pow(t,3);			},
 	cubicOut: 	function(t) { return 1-Math.pow(1-t,3); 	},
@@ -17197,14 +17198,14 @@ Object.defineProperty(Danimator, 'time', {
 
 /* retrieve sceneElement from DOM element, jQuery element, Paper.js item or Danimator sceneElement */
 Danimator.sceneElement = function danimatorSceneElement(element) {
-	if(element.$element) return element;
+	if(element.className === 'sceneElement') return element;
 	if(element instanceof jQuery) return element.data('sceneElement');
 	if(element instanceof HTMLElement) return $(element).data('sceneElement');
 	return _.get(element, 'data.sceneElement');
 }
 
 /** 
- * data helper: limit number between two boundarie
+ * data helper: limit number between two boundaries
  * – like _.clamp except it accepts upper and lower border in arbitrary order 
  * @example: Danimator.limit(5, 10, 0) will return 5 while _.clamp(5, 10, 0) will return 10.
  */
@@ -17317,6 +17318,12 @@ Danimator.step = function danimatorStep(animatable, progress) {
 		if(animatable.property === 'frame')
 			animatable.item.data._playing = false;
 	} else {
+		var _isStringAnimation = (typeof animatable.from === 'string');
+
+		if(_isStringAnimation) {
+			animatable.options.easing = 'constant';			// animation of strings can only be interpolated as constant keyframes for now
+		}
+
 		if(animatable.options.easing) {
 			/* Easing requires easing.js to be loaded, too */
 			try {
@@ -17325,17 +17332,15 @@ Danimator.step = function danimatorStep(animatable, progress) {
 					progress = easing(progress);
 				}
 			} catch(e) {
-				console.warn('Easing helpers not loaded!');
+				console.warn('Easing helpers probably not loaded!');
 			}
 		}
 
-		if(typeof animatable.from === 'string') {
+		if(_isStringAnimation) {
 			if(progress >= 1) {
-				newValue = animatable.to;
 				isDone = Danimator.interactive;
-			} else {
-				newValue = animatable.from;
 			}
+			newValue = [animatable.from, animatable.to][progress];
 		} else {
 			/* calculate new value and limit to "from" and "to" */
 			newValue = Danimator.limit(animatable.from + (range * progress), animatable.from, animatable.to);
@@ -17425,6 +17430,8 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 			})
 		}
 	}
+
+	item = Danimator.sceneElement(item).item;
 
 	// ### TODO: change initVal here if necessary
 	/* setTimeout to cover delay parameter */
@@ -17677,13 +17684,16 @@ Danimator.sound = function danimatorSound(name, options) {
 };
 
 var _createDanimatorScene = function(parent) {
-	var tree = {
-		className: 'sceneElement'
-	};
+	var tree = {};
 
 	// save (non-enumerable) reference to Paper.js item
 	Object.defineProperty(tree, 'item', { enumerable: false, writable: false, configurable: false, 
 		value: 	parent 
+	});
+
+	// save (non-enumerable) name of class for Paper.js compatibility
+	Object.defineProperty(tree, 'className', { enumerable: false, writable: false, configurable: false, 
+		value: 	'sceneElement'
 	});
 
 	// add (non-enumerable) data holder

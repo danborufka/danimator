@@ -1881,7 +1881,6 @@ Game.onLoad = function(project, name, options) {
 		if(event.event.button === 0)
 			if(event.event.metaKey) {
 				if(selectedElements.size) {
-					console.log('selectedElements', selectedElements);
 					var selectedItem = selectedElements.single.item;
 					selectedItem.position = selectedItem.position.add(event.delta);
 

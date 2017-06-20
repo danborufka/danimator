@@ -3,6 +3,7 @@
 var pi2 = Math.PI*2;
 
 Ease = {
+	constant: 	parseInt,
 	linear: 	function(t) { return t; 					},
 	cubicIn: 	function(t) { return Math.pow(t,3);			},
 	cubicOut: 	function(t) { return 1-Math.pow(1-t,3); 	},

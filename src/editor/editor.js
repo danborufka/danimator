@@ -595,7 +595,7 @@ jQuery(function($){
 				_timeScrubbing = true;
 				event.type = 'mousemove';
 				$(this).trigger(event).addClass('scrubbing');
-				Danimator._activeSound.wave.play(Danimator.time, Danimator.time + .08);
+				Danimator._activeSound && Danimator._activeSound.wave.play(Danimator.time, Danimator.time + .08);
 				$keyframesPanel.removeClass('hasSelection');
 			}
 		})
@@ -611,7 +611,7 @@ jQuery(function($){
 						t = snapKeyframes.snap(t);
 					}
 					// allow sound scrubbing by playing tiny chunks of it while dragging
-					Danimator._activeSound.wave.play(t, t + .08);
+					Danimator._activeSound && Danimator._activeSound.wave.play(t, t + .08);
 					
 					$currentTrack = $this;
 					Danimator.time = t;
@@ -826,7 +826,7 @@ jQuery(function($){
 		})
 		/* all resets onMouseUp */
 		.on('mouseup', function() {
-			if(_timeScrubbing) Danimator._activeSound.wave.pause();
+			if(_timeScrubbing) Danimator._activeSound && Danimator._activeSound.wave.pause();
 			_timeScrubbing = false;
 			_frameDragging = false;
 			draggingVisibles = -1;
@@ -1084,7 +1084,7 @@ function _createLayers(layers, $layers) {
 
 /* UI helpers for keyframes panel */
 function _getStartTime(track) 	{ return _.get(track ,'options.delay', 0);		}
-function _getEndTime(track) 	{ return _getStartTime(track) + track.duration; }
+function _getEndTime(track) 	{ return _getStartTime(track) + _.get(track, 'duration', 0); }
 
 /* colorisation & gradient styles for timeline tracks in keyframes panel */
 function _getStartStyle(property, tracks, key, type) {
@@ -1617,7 +1617,6 @@ Game.onLoad = function(project, name, options) {
 		if(event.event.button === 0)
 			if(event.event.metaKey) {
 				if(selectedElements.size) {
-					console.log('selectedElements', selectedElements);
 					var selectedItem = selectedElements.single.item;
 					selectedItem.position = selectedItem.position.add(event.delta);
 
