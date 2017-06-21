@@ -298,6 +298,7 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 
 	/* return handles for easier chaining of animations */
 	return {
+		duration: duration,
 		options: options,
 		then: 	 Danimator.then,
 		stop: 	function() {
@@ -343,7 +344,10 @@ Danimator.then = function danimatorThen() {
 	var action = args.shift();
 	var newOptions = _.last(args);
 
-	newOptions.delay = _.get(newOptions, 'delay', 0) + ((this.options && this.options.delay) || 0);
+	console.log('_getEndTime(this)', _getEndTime(this), this);
+
+	newOptions.delay = _.get(newOptions, 'delay', 0) + (_getEndTime(this) || 0);
+	args[args.length-1] = newOptions;
 
 	return Danimator[action].apply(this, args);
 }
@@ -363,7 +367,9 @@ Danimator.fadeOut = function danimatorFadeOut(item, duration, options) {
 	if(fromv !== undefined) {
 		item.opacity = fromv;
 		delete options.from;
-	} else fromv = null;
+	} else {
+		fromv = item.opacity;
+	};
 	item.visible = true;
 	return Danimator(item, 'opacity', fromv, _.get(options, 'to', 0), duration, options);
 };

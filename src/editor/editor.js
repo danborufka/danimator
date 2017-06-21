@@ -382,6 +382,7 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 
 	/* return handles for easier chaining of animations */
 	return {
+		duration: duration,
 		options: options,
 		then: 	 Danimator.then,
 		stop: 	 noop
@@ -1098,6 +1099,9 @@ function _getStartStyle(property, tracks, key, type) {
 			if(key === 0) {
 			 	value = currentTrack.initValue;
 			} else {
+
+				console.log(currentTrack.name, _.get(currentTrack, 'from'), 'to', _.get(currentTrack, 'to'), tracks[key-1].name, 'last.to', tracks[key-1].to);
+
 				value = _.get(currentTrack, 'from', tracks[key-1].to);
 			}
 			var color = _.repeat(parseInt(value * 15).toString(16), 3);	// show property as black/white gradient
