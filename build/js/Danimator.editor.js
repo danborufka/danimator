@@ -510,8 +510,8 @@ function _resetSelection() {
 		.find('ul.main').html(emptyState({ checked: FLAGS.view.selection }));
 }
 /* mapping all alerts to the console */
-function alert(msg) 	{
-	console.warn(msg);
+function alert(message, mode) 	{
+	alertify && alertify.notify(message, mode || 'success');
 }
 /* helper to turn a string into alphachars only */
 function slug(name) 	{ return name.replace(/[^a-z0-9_\-]+/g, '_'); }
@@ -903,56 +903,18 @@ jQuery(function($){
 			event.stopImmediatePropagation();
 		})
 		.on('dblclick', '#keyframes .track', function(event) {
-			var $this 	= $(this);
-			var prop 	= $this.closest('li.timeline').data('property');
-			var item 	= $this.closest('li.item').data('track').item;
-			var value 	= _.get(item, prop);
-			var time 	= Danimator.time;
+			var duration = parseInt(prompt('Please enter a duration (in seconds) for this animation!', '1s'));
 
-			var currentTracks = _.clone(tracks[item.id].properties[prop]);
-			var isFirst = _getStartTime(currentTracks[0]) > time;
-			var isLast  = _getEndTime(_.last(currentTracks)) < time;
+			if(duration && !isNaN(duration)) {
+				var $this 	= $(this);
+				var item 	= $this.closest('li.item').data('track').item;
+				var prop 	= $this.closest('li.timeline').data('property');
+				var value 	= _.get(item, prop);
 
-			if(isFirst) {
-				// add track from currentTime to first keyframe
-				Danimator(item, prop, value, value, _getStartTime(currentTracks[0]) - time, {
-					delay: time
-				});
-			} else if(isLast) {
-				// add track from last keyframe to currentTime
-				Danimator(item, prop, value, value, time - _getEndTime(_.last(currentTracks)), {
-					delay: _getEndTime(_.last(currentTracks))
-				});
-			} else {
-				var currentTrackIndex = _.findIndex(currentTracks, function(track) {
-					return _.inRange(Danimator.time, _getStartTime(track), _getEndTime(track));
-				});
-				var currentTrack = currentTracks[currentTrackIndex];
-				var lastTrack = _.get(currentTracks, currentTrackIndex-1, false);
-				var nextTrack = _.get(currentTracks, currentTrackIndex-1, false);
-
-
-				if(nextTrack) {
-					Danimator(item, prop, value, nextTrack.from, _getStartTime(nextTrack) - time, {
-						delay: time
-					});
-				}
-
-				if(lastTrack)
-					if(lastTrack.to != value) {
-						Danimator(item, prop, lastTrack.to, value, time - _getEndTime(lastTrack), {
-							delay: _getEndTime(lastTrack)
-						});
-				}
-
-				if(currentTrack) {
-					Danimator(item, prop, value, currentTrack.to, _getEndTime(currentTrack) - time, {
-						delay: time
-					});
-					currentTrack.duration = time - _getStartTime(currentTrack);
-					currentTrack.to 	  = value;
-				}
+				Danimator(item, prop, value, value, duration, { delay: Danimator.time });
 				_createTracks();
+			} else {
+				alert('You have to supply a floating number for duration!', 'error');
 			}
 		})
 		.on('change', '.flag_changer', function(event) {
@@ -1367,11 +1329,12 @@ function _getStartStyle(property, tracks, key, type) {
 			}
 			var color = _.repeat(parseInt(value * 15).toString(16), 3);	// show property as black/white gradient
 		} else if(_.last(property.split('.')) === 'hue') {				// show hue as colored gradient
+			value = _.get(currentTrack, 'from');
 			color = new paper.Color({hue: value, saturation: 1, lightness: .5}).toCSS(true).slice(1);
 		}
 
 		return 'background:#' + color;
-	} //else console.error('No config found for', property, property.replace(/(\.\d+)?\.([^\.]+)$/, '.content.$2'), ANIMATABLE_PROPERTIES[type]);
+	}
 }
 function _getRangeStyle(property, tracks, key, type) {
 	var propertyConfig = _.get(ANIMATABLE_PROPERTIES[type], property.replace(/(\.\d+)?\.([^\.]+)$/, '.content.$2'));
@@ -1424,8 +1387,7 @@ function _createTracks() {
 
 	_.each(tracks, function(track) {
 		if(track) {
-			//var properties = _.mapValues(track.properties, _.partial(_.sortBy, _, 'options.delay'));
-			var properties = _.mapValues(track.properties, _.partial(_.sortBy, _, '_getStartTime'));
+			var properties = _.mapValues(track.properties, _.partial(_.sortBy, _, 'options.delay'));
 			var sceneElement = Danimator.sceneElement(track.item);
 
 			var $keys = $(keyItemTmpl({
@@ -1721,7 +1683,7 @@ Game.onLoad = function(project, name, options) {
 				}
 			//}
 		});
-		alertify && alertify.notify('All saved!', 'success');
+		alert('All saved!');
 		resetLoading('saveAll');
 	}	
 
