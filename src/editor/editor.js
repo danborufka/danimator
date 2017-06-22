@@ -1099,9 +1099,6 @@ function _getStartStyle(property, tracks, key, type) {
 			if(key === 0) {
 			 	value = currentTrack.initValue;
 			} else {
-
-				console.log(currentTrack.name, _.get(currentTrack, 'from'), 'to', _.get(currentTrack, 'to'), tracks[key-1].name, 'last.to', tracks[key-1].to);
-
 				value = _.get(currentTrack, 'from', tracks[key-1].to);
 			}
 			var color = _.repeat(parseInt(value * 15).toString(16), 3);	// show property as black/white gradient
@@ -1163,7 +1160,8 @@ function _createTracks() {
 
 	_.each(tracks, function(track) {
 		if(track) {
-			var properties = _.mapValues(track.properties, _.partial(_.sortBy, _, 'options.delay'));
+			//var properties = _.mapValues(track.properties, _.partial(_.sortBy, _, 'options.delay'));
+			var properties = _.mapValues(track.properties, _.partial(_.sortBy, _, '_getStartTime'));
 			var sceneElement = Danimator.sceneElement(track.item);
 
 			var $keys = $(keyItemTmpl({
@@ -1191,62 +1189,71 @@ function _createTracks() {
 
 			$frames.each(function() {
 				var $this = $(this);
-				var y = $this.top() - 7;
+				var _y = $this.top() - 7;
+				
+				var newTime;
+				var currentTrack;
 
+				var keyTime    = $this.data('time');
 				var $lastRange = $this.prev('.range');
 				var $nextRange = $this.next('.range');
 
 				// add keyframe's time to snapping steps 
-				snapKeyframes.add( $this.data('time') );
+				snapKeyframes.add( keyTime );
 
 				$this.draggable({ 
-					containment: [ $lastRange.left() + 1, y, $nextRange.right() - 1, y],
+					containment: [ $lastRange.left() + 1, _y, $nextRange.right() - 1, _y],
 					cursor: 'pointer',
 					start: 	function() { _frameDragging = true; },
-					stop: 	function() { 
+					stop: 	function(event, ui) { 
+
+						_.each(currentTrack, function(track, index) {
+							// if startTime corresponds original time of currently dragged key
+							if(_getStartTime(track) === keyTime) {
+								// adapt startTime
+								track.options.delay = newTime;
+								track.duration = _getEndTime(track) - newTime;
+
+							} else if(_getEndTime(track) === keyTime) {
+								// adapt endTime
+								track.duration = newTime - _getStartTime(track);
+							}
+						});
+
 						_frameDragging = false; 
 						_createTracks();
 					},
 					drag: 	function(event, ui) { 
 						_frameDragging = true;
 
-						var index 	 		= $this.closest('.track').find('.keyframe').index($this);
-						var property 		= $this.closest('li.timeline').data('property');
-						var trackIndex 		= parseInt(index/2);
-						var currentTrack 	= $this.closest('li.item').data('track').properties[property];
-						var currentKey 		= currentTrack[trackIndex];
+						var x 			= ui.position.left - 1;
+						var index 	 	= $this.closest('.track').find('.keyframe').index($this);
+						var property 	= $this.closest('li.timeline').data('property');
 
-						var x 				= ui.position.left - 1;
-						var t 				= x / TIME_FACTOR;
+						currentTrack 	= $this.closest('li.item').data('track').properties[property];
+						newTime 		= x / TIME_FACTOR;
 
 						/* snap to snapping points onShiftHold */
 						if(event.shiftKey) {
-							t = snapKeyframes.snap(t);
-							x = t * TIME_FACTOR;
+							newTime = snapKeyframes.snap(newTime);
+							x = newTime * TIME_FACTOR;
 							ui.position.left = x + 1;
 						}
 
-						Danimator.time = t;
+						Danimator.time = newTime;
 
 						var $nextRange 		= $this.next('.range');
 						var $prevRange 		= $this.prev('.range');
+						var $nextKeyframe	= $this.next().next('.keyframe');
 
-						$nextRange.css({left: x});	// position "range" right after keyframe
+						var nextRangeDimensions = { left: x };
 
-						if(index % 2) {	// every other keyframe ends a "range"
-							currentKey.duration = t - _getStartTime(currentKey);
-
-							$prevRange.width(x+1-_getStartTime(currentKey) * TIME_FACTOR);
-
-							if(currentTrack[trackIndex+1]) {
-								$nextRange.width((_getStartTime(currentTrack[trackIndex+1]) - t) * TIME_FACTOR);
-							}
-						} else {
-							currentKey.duration += (currentKey.options.delay - t);
-							currentKey.options.delay = t;
-							$prevRange.width(x+1);
-							$nextRange.width(currentKey.duration * TIME_FACTOR);
+						if($nextKeyframe.length) {
+							nextRangeDimensions.width = ($nextKeyframe.data('time') - newTime) * TIME_FACTOR;
 						}
+
+						$prevRange.width( x - $prevRange.position().left );
+						$nextRange.css(nextRangeDimensions);					// position "range" right after keyframe
 					}
 				});
 			});

@@ -344,10 +344,14 @@ Danimator.then = function danimatorThen() {
 	var action = args.shift();
 	var newOptions = _.last(args);
 
-	console.log('_getEndTime(this)', _getEndTime(this), this);
+	if(typeof newOptions === 'object') {
+		args.pop();
+	} else {
+		newOptions = {};
+	}
 
 	newOptions.delay = _.get(newOptions, 'delay', 0) + (_getEndTime(this) || 0);
-	args[args.length-1] = newOptions;
+	args.push(newOptions);
 
 	return Danimator[action].apply(this, args);
 }
@@ -358,7 +362,7 @@ Danimator.fadeIn = function danimatorFadeIn(item, duration, options) {
 	if(fromv !== undefined) {
 		item.opacity = fromv;
 		delete options.from;
-	} else fromv = null;
+	} else fromv = 0;
 	item.visible = true;
 	return Danimator(item, 'opacity', fromv, _.get(options, 'to', 1), duration, options);
 };
@@ -367,9 +371,7 @@ Danimator.fadeOut = function danimatorFadeOut(item, duration, options) {
 	if(fromv !== undefined) {
 		item.opacity = fromv;
 		delete options.from;
-	} else {
-		fromv = item.opacity;
-	};
+	} else fromv = 1;
 	item.visible = true;
 	return Danimator(item, 'opacity', fromv, _.get(options, 'to', 0), duration, options);
 };
