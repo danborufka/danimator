@@ -1,0 +1,137 @@
+<head>
+	<title>Test</title>
+	<style type="text/css">
+		html,
+		body {
+		    margin: 0;
+		    overflow: hidden;
+		    height: 100%;
+		}
+		body {
+			background: #ddf;
+		}
+
+		canvas[resize] {
+			border: 1px solid orange;
+			width: 	100%;
+			height: 100%;
+		}
+	</style>
+	<meta charset="utf-8" />
+</head>
+<body>
+<input type="number" value="0" min="-1" step=".01" max="1">
+	<canvas id="mainCanvas" resize></canvas>
+	<!-- <script src="https://code.jquery.com/jquery-1.11.3.min.js" integrity="sha256-7LkWEzqTdpEfELxcZZlS6wAx5Ff13zZ83lYO2/ujj7g=" crossorigin="anonymous"></script> -->
+	<script src="js/jquery-1.11.3.min.js"></script>
+	<script src="http://localhost:8888/danimator/dist/js/Danimator.min.js"></script>
+	<script type="text/paperscript" canvas="mainCanvas">
+		var line = new Path;
+		var originalSegments = [];
+
+		view.zoom = 1.8;
+
+		line.add([0,0]);
+		line.add([0,-10]);
+		line.add([0,-25]);
+		line.add([0,-50]);
+		line.add([0,-55]);
+		line.add([0,-75]);
+		line.add([0,-95]);
+		line.add([0,-98]);
+		line.add([0,-100]);
+
+		line.name = 'myLine';
+		line.strokeColor = 'black';
+		line.strokeWidth = 2;
+		line.selected = true;
+
+		var lineLen = line.length;
+		var radius = 1000;
+
+		var centerPoint = new Shape.Circle(view.bounds.center, 5);
+		centerPoint.strokeColor = 'crimson';
+		centerPoint.strokeWidth = 1;
+
+		var centerLbl = new PointText(view.bounds.center + new Point(8, 0));
+		centerLbl.fillColor = 'crimson';
+		centerLbl.content = 'center';
+		centerLbl.fontSize = 9;
+
+		line.position = view.bounds.center - new Point(0, line.length/2);
+
+		line.segments.forEach(function(segment) {
+			originalSegments.push({
+				point: segment.point - view.bounds.center
+			});
+		});
+
+		var lines = [];
+		radius = line.length/(Math.PI*2);
+
+		for(var x=-200; x < 200; x += 10)
+			for(var y=-200; y < 200; y += 10) {
+
+				var A = new Path.Line(new Point(0, y), new Point(x, y));
+				var B = new Path.Line(new Point(y, 0), new Point(y, x));
+
+				lines.push( A );
+				lines.push( B );
+
+				A.set({
+					strokeColor: 'lightblue',
+					strokeWidth: 0.1
+				});
+				B.set({
+					strokeColor: 'lightblue',
+					strokeWidth: 0.1
+				});
+			}
+
+		lines = new Group(lines);
+		lines.position = view.bounds.center + 5;
+		lines.sendToBack();
+
+		var hull = new Path.Rectangle(line.bounds.center, line.bounds.size + [20, 0]);
+		hull.position = line.bounds.center;
+		hull.strokeColor = 'violet';
+		hull.strokeWidth = 1;
+		hull.selected = true;
+
+		_.each(hull.segments, function(segment, i) {
+			var curvePos = segment.location.time;
+			if(i === hull.segments.length-1) i = -1;
+			var nextSegment = hull.segments[i+1];
+			//hull.insertSegments(, [new Segment().interpolate(segment, nextSegment, .5)])
+		});
+
+		onMouseDrag = function(event) {
+			centerPoint.position = event.point;
+			//line.position = event.point - new Point(0, line.length/2);
+			centerLbl.position = event.point + new Point(22, 0);
+			$('input').trigger('change');
+		}
+
+		console.log('line', line);
+
+		$('input').on('change', function(event){
+			var $this 		= $(this);
+			var magnitude 		= Number($this.val());
+			
+			line.segments.forEach(function(segment, i) {
+				var oPos  = originalSegments[i].point;
+				var angle = (-360 * magnitude) * Math.PI/180;
+				var delta = centerPoint.position.getDistance(oPos + view.bounds.center);
+
+				angle *= delta/100;
+				angle += Math.PI;		// we want 0° to be on negative Y-axis, so rotate by 180
+
+				var relativePos = oPos;
+
+				segment.point.x = centerPoint.position.x + Math.sin(angle) * relativePos.length;
+				segment.point.y = centerPoint.position.y + Math.cos(angle) * relativePos.length;
+			});
+		});
+
+	</script>
+</body>
