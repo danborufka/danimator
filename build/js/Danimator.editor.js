@@ -13,33 +13,48 @@ var saveAs=saveAs||function(e){"use strict";if(typeof e==="undefined"||typeof na
 plotPointHeight:2,plotPointWidth:2,plotSeparator:!0,plotSeparatorColor:"black",plotRangeDisplay:!1,plotRangeUnits:"",plotRangePrecision:4,plotRangeIgnoreOutliers:!1,plotRangeFontSize:12,plotRangeFontType:"Ariel",waveDrawMedianLine:!0,plotFileDelimiter:"\t"},plotTimeStart:0,plotTimeEnd:-1,plotArrayLoaded:!1,plotArray:[],plotPoints:[],plotMin:0,plotMax:1,initDrawer:function(a){var b=this;for(var c in this.defaultPlotParams)void 0===this.params[c]&&(this.params[c]=this.defaultPlotParams[c]);if(this.plotTimeStart=this.params.plotTimeStart,void 0!==this.params.plotTimeEnd&&(this.plotTimeEnd=this.params.plotTimeEnd),Array.isArray(a.plotArray))this.plotArray=a.plotArray,this.plotArrayLoaded=!0;else{var d=function(a){b.plotArray=a,b.plotArrayLoaded=!0,b.fireEvent("plot_array_loaded")};this.loadPlotArrayFromFile(a.plotFileUrl,d,this.params.plotFileDelimiter)}},drawPeaks:function(a,b,c,d){if(1==this.plotArrayLoaded)this.setWidth(b),this.splitChannels=!0,this.params.height=this.params.height/2,a[0]instanceof Array&&(a=a[0]),this.params.barWidth?this.drawBars(a,1,c,d):this.drawWave(a,1,c,d),this.params.height=2*this.params.height,this.calculatePlots(),this.drawPlots();else{var e=this;e.on("plot-array-loaded",function(){e.drawPeaks(a,b,c,d)})}},drawPlots:function(){var a=this.params.height*this.params.pixelRatio/2,b=.5/this.params.pixelRatio;this.waveCc.fillStyle=this.params.plotColor,this.progressCc&&(this.progressCc.fillStyle=this.params.plotProgressColor);for(var c in this.plotPoints){var d=parseInt(c),e=a-this.params.plotPointHeight-this.plotPoints[c]*(a-this.params.plotPointHeight),f=this.params.plotPointHeight;this.waveCc.fillRect(d,e,this.params.plotPointWidth,f),this.progressCc&&this.progressCc.fillRect(d,e,this.params.plotPointWidth,f)}this.params.plotSeparator&&(this.waveCc.fillStyle=this.params.plotSeparatorColor,this.waveCc.fillRect(0,a,this.width,b)),this.params.plotRangeDisplay&&this.displayPlotRange()},displayPlotRange:function(){var a=this.params.plotRangeFontSize*this.params.pixelRatio,b=this.plotMax.toPrecision(this.params.plotRangePrecision)+" "+this.params.plotRangeUnits,c=this.plotMin.toPrecision(this.params.plotRangePrecision)+" "+this.params.plotRangeUnits;this.waveCc.font=a.toString()+"px "+this.params.plotRangeFontType,this.waveCc.fillText(b,3,a),this.waveCc.fillText(c,3,this.height/2)},calculatePlots:function(){this.plotPoints={},this.calculatePlotTimeEnd();for(var a=[],b=-1,c=0,d=99999999999999,e=0,f=99999999999999,g=this.plotTimeEnd-this.plotTimeStart,h=0;h<this.plotArray.length;h++){var i=this.plotArray[h];if(i.value>c&&(c=i.value),i.value<d&&(d=i.value),i.time>=this.plotTimeStart&&i.time<=this.plotTimeEnd){var j=Math.round(this.width*(i.time-this.plotTimeStart)/g);if(a.push(i.value),j!==b&&a.length>0){var k=this.avg(a);k>e&&(e=k),k<f&&(f=k),this.plotPoints[b]=k,a=[]}b=j}}"whole"==this.params.plotNormalizeTo?(this.plotMin=d,this.plotMax=c):"values"==this.params.plotNormalizeTo?(this.plotMin=this.params.plotMin,this.plotMax=this.params.plotMax):(this.plotMin=f,this.plotMax=e),this.normalizeValues()},normalizeValues:function(){var a={};if("none"!==this.params.plotNormalizeTo){for(var b in this.plotPoints){var c=(this.plotPoints[b]-this.plotMin)/(this.plotMax-this.plotMin);c>1?this.params.plotRangeIgnoreOutliers||(a[b]=1):c<0?this.params.plotRangeIgnoreOutliers||(a[b]=0):a[b]=c}this.plotPoints=a}},loadPlotArrayFromFile:function(b,c,d){void 0===d&&(d="\t");var e=[],f={url:b,responseType:"text"},g=a.util.ajax(f);g.on("load",function(a){if(200==a.currentTarget.status){for(var b=a.currentTarget.responseText.split("\n"),f=0;f<b.length;f++){var g=b[f].split(d);2==g.length&&e.push({time:parseFloat(g[0]),value:parseFloat(g[1])})}c(e)}})},calculatePlotTimeEnd:function(){void 0!==this.params.plotTimeEnd?this.plotTimeEnd=this.params.plotTimeEnd:this.plotTimeEnd=this.plotArray[this.plotArray.length-1].time},avg:function(a){var b=a.reduce(function(a,b){return a+b});return b/a.length}}),a.util.extend(a.Drawer.SplitWavePointPlot,a.Observer),a.PeakCache={init:function(){this.clearPeakCache()},clearPeakCache:function(){this.peakCacheRanges=[],this.peakCacheLength=-1},addRangeToPeakCache:function(a,b,c){a!=this.peakCacheLength&&(this.clearPeakCache(),this.peakCacheLength=a);for(var d=[],e=0;e<this.peakCacheRanges.length&&this.peakCacheRanges[e]<b;)e++;for(e%2==0&&d.push(b);e<this.peakCacheRanges.length&&this.peakCacheRanges[e]<=c;)d.push(this.peakCacheRanges[e]),e++;e%2==0&&d.push(c),d=d.filter(function(a,b,c){return 0==b?a!=c[b+1]:b==c.length-1?a!=c[b-1]:a!=c[b-1]&&a!=c[b+1]}),this.peakCacheRanges=this.peakCacheRanges.concat(d),this.peakCacheRanges=this.peakCacheRanges.sort(function(a,b){return a-b}).filter(function(a,b,c){return 0==b?a!=c[b+1]:b==c.length-1?a!=c[b-1]:a!=c[b-1]&&a!=c[b+1]});var f=[];for(e=0;e<d.length;e+=2)f.push([d[e],d[e+1]]);return f},getCacheRanges:function(){for(var a=[],b=0;b<this.peakCacheRanges.length;b+=2)a.push([this.peakCacheRanges[b],this.peakCacheRanges[b+1]]);return a}},function(){var b=function(){var b=document.querySelectorAll("wavesurfer");Array.prototype.forEach.call(b,function(b){var c=a.util.extend({container:b,backend:"MediaElement",mediaControls:!0},b.dataset);b.style.display="block";var d=a.create(c);if(b.dataset.peaks)var e=JSON.parse(b.dataset.peaks);d.load(b.dataset.url,e)})};"complete"===document.readyState?b():window.addEventListener("load",b)}(),a});
 //# sourceMappingURL=wavesurfer.min.js.map;
 /* interactive DOM panels */
+jQuery(document)
+	/* general panel handling */
+	.on('click', '.panel > label .toggle', function(event) {
+		var $panel = $(this).closest('.panel');
+		$panel.toggleClass('collapsed');
+		/* save open state to localStorage */
+		localStorage.setItem('editor-panels-' + $panel[0].id + '-collapsed', $panel.is('.collapsed'));
+	})
+	.on('dblclick', '.panel > label', function(event) {
+		$(this).find('.toggle').click();
+	})
+	.on('click', '.panel li .toggleGroup', function(event) {
+		$(this).closest('li').toggleClass('open');
 
-var PANEL_TOLERANCE = 10;
+		event.preventDefault();
+		event.stopPropagation();
+		event.stopImmediatePropagation();
+	})
+	.on('change', '.flag_changer', function(event) {
+		var $this = $(this);
+		_.set(FLAGS, $this.data('flag'), $this.is(':checked'));
+	});
 
-/* DOM events */
-jQuery(function($){
-	$(document)
-		/* general panel handling */
-		.on('click', '.panel > label .toggle', function(event) {
-			var $panel = $(this).closest('.panel');
-			$panel.toggleClass('collapsed');
-			/* save open state to localStorage */
-			localStorage.setItem('editor-panels-' + $panel[0].id + '-collapsed', $panel.is('.collapsed'));
-		})
-		.on('dblclick', '.panel > label', function(event) {
-			$(this).find('.toggle').click();
-		})
-		.on('click', '.panel li .toggleGroup', function(event) {
-			$(this).closest('li').toggleClass('open');
+/* initialize panels! */
+jQuery('.panel').each(function() {
+	var $panel = $(this);
+	var collapsed = localStorage.getItem('editor-panels-' + this.id + '-collapsed');
 
-			event.preventDefault();
-			event.stopPropagation();
-			event.stopImmediatePropagation();
+	$panel
+		.draggable({ 
+			handle: 		'>label', 
+			containment: 	[0, 0, $(window).width() - $panel.width(), $(window).height() - $panel.height()],
+			stop: 			function() {
+				localStorage.setItem('editor-panels-' + $panel[0].id + '-pos', JSON.stringify($panel.offset()));
+			}
 		})
-		.on('change', '.flag_changer', function(event) {
-			var $this = $(this);
-			_.set(FLAGS, $this.data('flag'), $this.is(':checked'));
-		});
+		.toggleClass('collapsed', collapsed == 'true');
+
+	var pos = localStorage.getItem('editor-panels-' + $panel[0].id + '-pos');
+	if(pos = pos && JSON.parse(pos)) {
+		$panel.css(pos);
+	}
 });;
 /** 
  * Internal helper for easier handling of global selection(s) in our Paper.js scene
@@ -745,6 +760,8 @@ jQuery(function($){
 				handpicked: true,
 				item: Danimator.sceneElement(this).item
 			}));
+
+			console.log('clicking panel…');
 
 			event.preventDefault();
 			event.stopPropagation();
@@ -1963,27 +1980,6 @@ Game.onLoad = function(project, name, options) {
 	self.container.appendTop(_anchorViz);
 
 	_createLayers(layers, $('.panel#layers ul').empty());
-
-	/* initialize panels! */
-	$('.panel').each(function() {
-		var $panel = $(this);
-		var collapsed = localStorage.getItem('editor-panels-' + this.id + '-collapsed');
-
-		$panel
-			.draggable({ 
-				handle: 		'>label', 
-				containment: 	[0, 0, $(window).width() - $panel.width(), $(window).height() - $panel.height()],
-				stop: 			function() {
-					localStorage.setItem('editor-panels-' + $panel[0].id + '-pos', JSON.stringify($panel.offset()));
-				}
-			})
-			.toggleClass('collapsed', collapsed == 'true');
-
-		var pos = localStorage.getItem('editor-panels-' + $panel[0].id + '-pos');
-		if(pos = pos && JSON.parse(pos)) {
-			$panel.css(pos);
-		}
-	});
 
 	if(!Danimator.sound) $('.panel#audio').hide();
 

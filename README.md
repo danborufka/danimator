@@ -100,6 +100,7 @@ property | description
 then | shortcut for Danimator.then(…)
 options | original options passed to Danimator.animate(…)
 stop | used to prevent delayed animation from happening
+___
 
 ### Danimator _.then(…)_
 #### Parameters

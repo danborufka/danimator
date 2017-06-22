@@ -453,6 +453,8 @@ jQuery(function($){
 				item: Danimator.sceneElement(this).item
 			}));
 
+			console.log('clicking panel…');
+
 			event.preventDefault();
 			event.stopPropagation();
 			event.stopImmediatePropagation();
@@ -1670,27 +1672,6 @@ Game.onLoad = function(project, name, options) {
 	self.container.appendTop(_anchorViz);
 
 	_createLayers(layers, $('.panel#layers ul').empty());
-
-	/* initialize panels! */
-	$('.panel').each(function() {
-		var $panel = $(this);
-		var collapsed = localStorage.getItem('editor-panels-' + this.id + '-collapsed');
-
-		$panel
-			.draggable({ 
-				handle: 		'>label', 
-				containment: 	[0, 0, $(window).width() - $panel.width(), $(window).height() - $panel.height()],
-				stop: 			function() {
-					localStorage.setItem('editor-panels-' + $panel[0].id + '-pos', JSON.stringify($panel.offset()));
-				}
-			})
-			.toggleClass('collapsed', collapsed == 'true');
-
-		var pos = localStorage.getItem('editor-panels-' + $panel[0].id + '-pos');
-		if(pos = pos && JSON.parse(pos)) {
-			$panel.css(pos);
-		}
-	});
 
 	if(!Danimator.sound) $('.panel#audio').hide();
 

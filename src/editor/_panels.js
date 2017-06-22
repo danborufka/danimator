@@ -1,29 +1,44 @@
 /* interactive DOM panels */
+jQuery(document)
+	/* general panel handling */
+	.on('click', '.panel > label .toggle', function(event) {
+		var $panel = $(this).closest('.panel');
+		$panel.toggleClass('collapsed');
+		/* save open state to localStorage */
+		localStorage.setItem('editor-panels-' + $panel[0].id + '-collapsed', $panel.is('.collapsed'));
+	})
+	.on('dblclick', '.panel > label', function(event) {
+		$(this).find('.toggle').click();
+	})
+	.on('click', '.panel li .toggleGroup', function(event) {
+		$(this).closest('li').toggleClass('open');
 
-var PANEL_TOLERANCE = 10;
+		event.preventDefault();
+		event.stopPropagation();
+		event.stopImmediatePropagation();
+	})
+	.on('change', '.flag_changer', function(event) {
+		var $this = $(this);
+		_.set(FLAGS, $this.data('flag'), $this.is(':checked'));
+	});
 
-/* DOM events */
-jQuery(function($){
-	$(document)
-		/* general panel handling */
-		.on('click', '.panel > label .toggle', function(event) {
-			var $panel = $(this).closest('.panel');
-			$panel.toggleClass('collapsed');
-			/* save open state to localStorage */
-			localStorage.setItem('editor-panels-' + $panel[0].id + '-collapsed', $panel.is('.collapsed'));
-		})
-		.on('dblclick', '.panel > label', function(event) {
-			$(this).find('.toggle').click();
-		})
-		.on('click', '.panel li .toggleGroup', function(event) {
-			$(this).closest('li').toggleClass('open');
+/* initialize panels! */
+jQuery('.panel').each(function() {
+	var $panel = $(this);
+	var collapsed = localStorage.getItem('editor-panels-' + this.id + '-collapsed');
 
-			event.preventDefault();
-			event.stopPropagation();
-			event.stopImmediatePropagation();
+	$panel
+		.draggable({ 
+			handle: 		'>label', 
+			containment: 	[0, 0, $(window).width() - $panel.width(), $(window).height() - $panel.height()],
+			stop: 			function() {
+				localStorage.setItem('editor-panels-' + $panel[0].id + '-pos', JSON.stringify($panel.offset()));
+			}
 		})
-		.on('change', '.flag_changer', function(event) {
-			var $this = $(this);
-			_.set(FLAGS, $this.data('flag'), $this.is(':checked'));
-		});
+		.toggleClass('collapsed', collapsed == 'true');
+
+	var pos = localStorage.getItem('editor-panels-' + $panel[0].id + '-pos');
+	if(pos = pos && JSON.parse(pos)) {
+		$panel.css(pos);
+	}
 });
