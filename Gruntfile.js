@@ -15,6 +15,11 @@ module.exports = function(grunt) {
             src: ['src/engine/libs/*.js', 'src/engine/*.js'],
             dest: 'dist/js/Danimator.js'
         },
+        audio: {
+            options: { separator: ';' + grunt.util.linefeed },
+            src: ['src/audio/libs/*.js', 'src/audio/*.js'],
+            dest: 'dist/js/Danimator.audio.js'
+        },
         editor: {
             options: { separator: ';' + grunt.util.linefeed },
             src: ['src/editor/libs/*.js','src/editor/*.js'],
@@ -39,12 +44,17 @@ module.exports = function(grunt) {
             sourceMap: true
         },
         engine: { files: {'dist/js/Danimator.min.js': ['dist/js/Danimator.js'] }},
+        audio:  { files: {'dist/js/Danimator.audio.min.js': ['dist/js/Danimator.audio.js'] }},
         editor: { files: {'dist/js/Danimator.editor.min.js': ['build/js/Danimator.editor.js'] }, options: { sourceMap: false }}
     },
     watch: {
       engine: {
         files: ['src/engine/*.js', 'src/engine/*/*.js'],
         tasks: ['concat:engine', 'uglify:engine']
+      },
+      audio: {
+        files: ['src/audio/*.js', 'src/audio/*/*.js'],
+        tasks: ['concat:audio', 'uglify:audio']
       },
       editor: {
         files: ['src/editor/*.js', 'src/editor/*/*.js'],

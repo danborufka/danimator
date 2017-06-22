@@ -1750,6 +1750,8 @@ Game.onLoad = function(project, name, options) {
 		}
 	});
 
+	if(!Danimator.sound) $('.panel#audio').hide();
+
 	$('body').addClass('ready');
 
 	return this;
