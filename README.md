@@ -9,7 +9,7 @@ Start by importing an **SVG** like so:
 ```js
 Danimator.import(svg, options);
 ```
-This will use [Paper.js to parse the SVG to canvas](http://paperjs.org/reference/project/#importsvg-svg), rename the imported group to [`scene`](#scene), and create a [`sceneElement`](#sceneelement) for it. You can either pass a callback as  second parameters or a map with an _onLoad_ property to be executed once the SVG has been imported. onLoad will retrieve the parsed [scene](#scene) as parameter.
+This will use [Paper.js to parse the SVG to canvas](http://paperjs.org/reference/project/#importsvg-svg), rename the imported group to [`scene`](#scene), and create a [`sceneElement`](#sceneelement) for it. The second parameter accepts a map with an _onLoad_ property to be executed once the SVG has been imported. You can also pass the callback directly as second param. onLoad will retrieve the parsed [scene](#scene) as parameter.
 ```js
 Danimator.import(svg, (scene) => scene.bear.item.strokeColor = 'yellow');
 ```
@@ -100,3 +100,15 @@ property | description
 then | shortcut for Danimator.then(…)
 options | original options passed to Danimator.animate(…)
 stop | used to prevent delayed animation from happening
+
+### Danimator _.then(…)_
+#### Parameters
+`animationMethod`, `element`, `…`
+
+argument | data type | description | example
+-|-|-|-
+animationMethod | String | The Danimator method to be used | "animate"
+… | If animationMethod is 'animate', all following parameters correspond to the ones you'd pass to Danimator.animate)
+
+#### Returns
+Whatever the according animation method would return – most times Danimator itself for easier chaining.
