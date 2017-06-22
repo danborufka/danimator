@@ -8,7 +8,7 @@ var events 			= {};
 var currentGame;
 
 var TIME_FACTOR 	= 10;
-var FLAGS 			= {
+var FLAGS 			= {					// see _panels.js for usage example
 	view: {
 		selection: true
 	}
@@ -149,8 +149,6 @@ var _HOVER_STYLES = {
 };
 
 var LOADING_STATES = [];
-
-var PANEL_TOLERANCE = 10;
 
 var _isBoundsItem = function(item) {
 	return ['PlacedSymbol', 'Group', 'SymbolItem', 'Raster'].indexOf(item.className) >= 0;
@@ -448,23 +446,6 @@ jQuery(function($){
 	var $propertiesPanel = $('#properties');
 
 	$(document)
-		/* general panel handling */
-		.on('click', '.panel > label .toggle', function(event) {
-			var $panel = $(this).closest('.panel');
-			$panel.toggleClass('collapsed');
-			/* save open state to localStorage */
-			localStorage.setItem('editor-panels-' + $panel[0].id + '-collapsed', $panel.is('.collapsed'));
-		})
-		.on('dblclick', '.panel > label', function(event) {
-			$(this).find('.toggle').click();
-		})
-		.on('click', '.panel li .toggleGroup', function(event) {
-			$(this).closest('li').toggleClass('open');
-
-			event.preventDefault();
-			event.stopPropagation();
-			event.stopImmediatePropagation();
-		})
 		/* layer-specific events */
 		.on('click', '.panel .layer', function(event) {
 			$(this).trigger($.Event('selected', {
@@ -653,10 +634,6 @@ jQuery(function($){
 				alert('You have to supply a floating number for duration!', 'error');
 			}
 		})
-		.on('change', '.flag_changer', function(event) {
-			var $this = $(this);
-			_.set(FLAGS, $this.data('flag'), $this.is(':checked'));
-		})
 		/* interactivity of property inputs */
 		.on('change', '#properties :input', function() {
 			if(selectedElements.size) {
@@ -730,16 +707,19 @@ jQuery(function($){
 
 				if(data.track) {
 					var itemId = selectedElements.single.item.id;
-					var currentTrack = tracks[itemId].properties[prop][data.track.id];
+					var currentTrack = tracks[itemId].properties[prop];
 
-					if(Danimator.time === _getStartTime(currentTrack)) {
-						currentTrack.from = value;
-						if(data.track.id === 0) {
-							currentTrack.initValue = value;
+					_.each(currentTrack, function(track, id) {
+						if(Danimator.time === _getStartTime(track)) {
+							track.from = value;
+							if(id === 0) {
+								track.initValue = value;
+							}
+						} else if(Danimator.time === _getEndTime(track)) {
+							track.to = value;
 						}
-					} else {
-						currentTrack.to = value;
-					}
+					});
+
 					_createTracks();
 				}
 
