@@ -76,6 +76,7 @@ All animation methods accept an options map as last parameter. You may configure
 option | data type | description | example
 -|-|-|-
 delay | _Number_ | How long to wait before starting the animation (in s) | 2
+onStep | _Function_ | Callback to be run on every step of the animation. Takes one parameter `time` to apply a filter to the progress (0 to 1) of the animation by returning the new value. | onStep: (t) => t * 2 	// double the speed!
 onDone | _Function_ or _String_ | Callback to be run once the animation is done. Use one of the strings "reverse", "loop", or "pingpong" to repeat the animation automatically. | "reverse"
 onLoop | _Function_ | If you supplied a String to onDone, this provides a callback for every iteration of a loop | -
 
@@ -104,12 +105,12 @@ ___
 
 ### Danimator _.then(…)_
 #### Parameters
-`animationMethod`, `element`, `…`
+`animationMethod`, `[element]`, `[…]`
 
 argument | data type | description | example
 -|-|-|-
 animationMethod | _String_ or _Function_ | The Danimator method to be used or a callback to be called after the animation has finished | "animate"
-… | If animationMethod is 'animate', all following parameters correspond to the ones you'd pass to Danimator.animate)
+[…] | If animationMethod is 'animate', all following parameters correspond to the ones you'd pass to Danimator.animate)
 
 #### Returns
 Whatever the according animation method would return – most times a [Danimator handler](#returns) itself for easier chaining.
