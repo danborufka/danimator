@@ -95,11 +95,11 @@ options | _Object_ | [Configure the animation.](#animation-options) | { delay:
 #### Returns
 A handler with the following properties:
 
-property | description
--|-
-then | shortcut for Danimator.then(…)
-options | original options passed to Danimator.animate(…)
-stop | used to prevent delayed animation from happening
+property | data type | description
+-|-|-
+then | _Function_ | shortcut for Danimator.then(…)
+options | _Object_ | original options passed to Danimator.animate(…)
+stop | _Function_ | used to prevent delayed animation from happening
 ___
 
 ### Danimator _.then(…)_
