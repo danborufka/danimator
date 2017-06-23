@@ -108,7 +108,7 @@ ___
 
 argument | data type | description | example
 -|-|-|-
-animationMethod | String | The Danimator method to be used | "animate"
+animationMethod | _String_ or _Function_ | The Danimator method to be used or a callback to be called after the animation has finished | "animate"
 … | If animationMethod is 'animate', all following parameters correspond to the ones you'd pass to Danimator.animate)
 
 #### Returns
