@@ -112,4 +112,4 @@ animationMethod | _String_ or _Function_ | The Danimator method to be used or 
 … | If animationMethod is 'animate', all following parameters correspond to the ones you'd pass to Danimator.animate)
 
 #### Returns
-Whatever the according animation method would return – most times Danimator itself for easier chaining.
+Whatever the according animation method would return – most times a [Danimator handler](#returns) itself for easier chaining.
