@@ -76,7 +76,7 @@ All animation methods accept an options map as last parameter. You may configure
 option | data type | description | example
 -|-|-|-
 delay | _Number_ | How long to wait before starting the animation (in s) | 2
-onStep | _Function_ | Callback to be run on every step of the animation. Takes one parameter `time` to apply a filter to the progress (0 to 1) of the animation by returning the new value. | onStep: (t) => t * 2 	      `/* 2x speed! */`
+onStep | _Function_ | Callback to be run on every step of the animation. Takes one parameter `time` to apply a filter to the progress (0 to 1) of the animation by returning the new value. | onStep: (t) => t * 2 	      	`// 2x speed!`
 onDone | _Function_ or _String_ | Callback to be run once the animation is done. Use one of the strings "reverse", "loop", or "pingpong" to repeat the animation automatically. | "reverse"
 onLoop | _Function_ | If you supplied a String to onDone, this provides a callback for every iteration of a loop | -
 
