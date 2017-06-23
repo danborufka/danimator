@@ -17518,6 +17518,19 @@ Danimator.then = function danimatorThen() {
 	}
 
 	newOptions.delay = _.get(newOptions, 'delay', 0) + _.get(this, 'options.delay', 0) + _.get(this, 'duration', 0);
+
+	// if we passed a callback instead of parameters
+	if(typeof action === 'function') {
+		// simply delay the call and return the usual animation handlers
+		var aniTimeout = setTimeout(action, newOptions.delay * 1000);
+		return {
+			then: 	 Danimator.then,
+			stop: 	function() {
+					clearTimeout(aniTimeout);
+				}
+		}
+	}
+
 	args.push(newOptions);
 
 	return Danimator[action].apply(this, args);
