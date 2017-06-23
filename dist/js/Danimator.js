@@ -17346,7 +17346,10 @@ Danimator.step = function danimatorStep(animatable, progress) {
 
 		/* animatable onStep hook to intervene on every step */
 		if(animatable.options.onStep) {
-			newValue = animatable.options.onStep(newValue, progress, animatable);
+			var result = animatable.options.onStep(newValue, progress, animatable);
+			if(result !== undefined) {
+				newValue = result;
+			}
 		}
 
 		_.set(animatable.item, animatable.property, newValue);
@@ -17514,7 +17517,7 @@ Danimator.then = function danimatorThen() {
 		newOptions = {};
 	}
 
-	newOptions.delay = _.get(newOptions, 'delay', 0) + (_getEndTime(this) || 0);
+	newOptions.delay = _.get(newOptions, 'delay', 0) + _.get(this, 'options.delay', 0) + _.get(this, 'duration', 0);
 	args.push(newOptions);
 
 	return Danimator[action].apply(this, args);
@@ -17776,7 +17779,10 @@ paper.Item.inject({
 				self.data._state = _.keys(states)[0];					// set default state to first key of states object
 			} 
 
-			states[self.data._state].visible = false;					// hide current state 
+			if(self.data._state) {
+				states[self.data._state].visible = false;				// hide current state if there is one
+			}
+
 			states[state].visible = true;								// and show newly set state instead
 			self.data._state = state;
 		}

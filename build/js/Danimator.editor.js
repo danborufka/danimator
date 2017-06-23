@@ -480,11 +480,13 @@ function _linearTolog(factor, min, max) {
   max = Math.log(max);
   return Math.exp(min + (max-min) * factor);
 }
+
 function _decimalPlaces(num) {
   var match = (''+num).match(/(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
   if (!match) { return 0; }
   return Math.max( 0, (match[1] ? match[1].length : 0) - (match[2] ? +match[2] : 0));
 }
+
 function _basename(str) {
    var base = new String(str).substring(_.lastIndexOf(str, '/') + 1); 
     if(_.lastIndexOf(base, '.') != -1)       
@@ -761,8 +763,6 @@ jQuery(function($){
 				item: Danimator.sceneElement(this).item
 			}));
 
-			console.log('clicking panel…');
-
 			event.preventDefault();
 			event.stopPropagation();
 			event.stopImmediatePropagation();
@@ -902,11 +902,12 @@ jQuery(function($){
 					if(event.shiftKey) {
 						t = snapKeyframes.snap(t);
 					}
-					// allow sound scrubbing by playing tiny chunks of it while dragging
-					Danimator._activeSound && Danimator._activeSound.wave.play(t, t + .08);
 					
 					$currentTrack = $this;
 					Danimator.time = t;
+					
+					// allow sound scrubbing by playing tiny chunks of it while dragging
+					Danimator._activeSound && Danimator._activeSound.wave.play(Danimator.time, Danimator.time + .08);
 				}
 		})
 		.on('mouseup', '.timeline .track', function(event) {
