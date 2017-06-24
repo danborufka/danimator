@@ -17,8 +17,8 @@ var animations = [];
 if(!this.Danimator) {
 	Danimator = function Danimator() { return Danimator.animate.apply(Danimator, arguments); };
 }
-
 Danimator._time = 0;
+Danimator.triggers = [];
 
 /* adding time getter/setter to Danimator */
 Object.defineProperty(Danimator, 'time', {
@@ -115,7 +115,15 @@ Danimator.load = function danimatorLoad(aniName) {
 				if(item) 
 					_.each(animatable.properties, function(tracks, prop) {
 						_.each(tracks, function(track) {
-							Danimator.animate(item, prop, track.from, track.to, track.duration, track.options);
+							if(animatable.trigger) {
+								var trigger = {};
+								// create array of parameters for Danimator.animate as "triggerable"
+								trigger[animatable.trigger] = [item, prop, track.from, track.to, track.duration, track.options];
+
+								Danimator.triggers.push(trigger);
+							} else {
+								Danimator.animate(item, prop, track.from, track.to, track.duration, track.options);
+							}
 						})
 					});
 			})
@@ -125,16 +133,25 @@ Danimator.load = function danimatorLoad(aniName) {
 	}).fail(function(promise, type, error){ console.error(error); });
 }
 
+/* helper to manually trigger loaded animations */
+Danimator.trigger = function danimatorTrigger(name) {
+	// find trigger and call animate with the parameters array of said trigger
+	Danimator.triggers[name] && Danimator.animate.apply(Danimator, Danimator.triggers[name]);
+	return Danimator;
+};
+
 /* calculate single step of animation */
 Danimator.step = function danimatorStep(animatable, progress) {
 	var value = _.get(animatable.item, animatable.property);
 
 	if(animatable.from == undefined) 		animatable.from = value;
 
-	if(typeof animatable.to === 'string') {		// if animatable.to is a String
-		if(!isNaN(animatable.to)) {				// yet contains a number
-			animatable.to = animatable.from + Number(animatable.to); 	// increment by that number instead
-		}
+	switch(typeof animatable.to) {
+		case 'string': 														// if animatable.to is a String
+			if(!isNaN(animatable.to)) {										// yet contains a number
+				animatable.to = animatable.from + Number(animatable.to); 	// increment by that number instead
+			}
+			break;
 	}
 
 	var ascending = animatable.to > animatable.from;	// check whether values are animated ascending or descending
@@ -268,7 +285,9 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 		}
 	}
 
-	item = Danimator.sceneElement(item).item;
+	if(item.className === 'sceneElement') {
+		item = Danimator.sceneElement(item).item;
+	}
 
 	// ### TODO: change initVal here if necessary
 	/* setTimeout to cover delay parameter */
@@ -494,7 +513,7 @@ var _createDanimatorScene = function(parent) {
 	// save (non-enumerable) reference to DOM element
 	if(parent.name) {
 		Object.defineProperty(tree, '$element', { enumerable: false, writable: false, configurable: false, 
-			value: 	parent.data.sceneRoot ? paper.$dom : paper.$dom.find('#' + parent.name)
+			value: 	parent.data.sceneRoot ? paper.$dom : paper.$dom && paper.$dom.find('#' + parent.name)
 		});
 	}
 
