@@ -18,6 +18,7 @@ if(!this.Danimator) {
 	Danimator = function Danimator() { return Danimator.animate.apply(Danimator, arguments); };
 }
 Danimator._time = 0;
+Danimator.triggers = [];
 
 /* adding time getter/setter to Danimator */
 Object.defineProperty(Danimator, 'time', {
@@ -114,7 +115,15 @@ Danimator.load = function danimatorLoad(aniName) {
 				if(item) 
 					_.each(animatable.properties, function(tracks, prop) {
 						_.each(tracks, function(track) {
-							Danimator.animate(item, prop, track.from, track.to, track.duration, track.options);
+							if(animatable.trigger) {
+								var trigger = {};
+								// create array of parameters for Danimator.animate as "triggerable"
+								trigger[animatable.trigger] = [item, prop, track.from, track.to, track.duration, track.options];
+
+								Danimator.triggers.push(trigger);
+							} else {
+								Danimator.animate(item, prop, track.from, track.to, track.duration, track.options);
+							}
 						})
 					});
 			})
@@ -123,6 +132,13 @@ Danimator.load = function danimatorLoad(aniName) {
 		}
 	}).fail(function(promise, type, error){ console.error(error); });
 }
+
+/* helper to manually trigger loaded animations */
+Danimator.trigger = function danimatorTrigger(name) {
+	// find trigger and call animate with the parameters array of said trigger
+	Danimator.triggers[name] && Danimator.animate.apply(Danimator, Danimator.triggers[name]);
+	return Danimator;
+};
 
 /* calculate single step of animation */
 Danimator.step = function danimatorStep(animatable, progress) {
