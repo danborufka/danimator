@@ -497,7 +497,7 @@ var _createDanimatorScene = function(parent) {
 	// save (non-enumerable) reference to DOM element
 	if(parent.name) {
 		Object.defineProperty(tree, '$element', { enumerable: false, writable: false, configurable: false, 
-			value: 	parent.data.sceneRoot ? paper.$dom : _.get(paper, '$dom.find', _.noop)('#' + parent.name)
+			value: 	parent.data.sceneRoot ? paper.$dom : paper.$dom && paper.$dom.find('#' + parent.name)
 		});
 	}
 
