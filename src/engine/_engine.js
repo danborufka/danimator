@@ -77,6 +77,7 @@ Danimator.init = function danimatorInit(item) {
 		if(definition.item.name)
 			paper.scene.symbols[definition.item.name] = definition;
 	});
+	return Danimator;
 }
 
 /* imports an SVG using Paper.js and turns it into a Danimator sceneElement */
@@ -99,7 +100,7 @@ Danimator.import = function DanimatorImport(svgPath, optionsOrOnLoad) {
 		_onLoad && _onLoad.call(paper.scene);
 	};
 
-	paper.project.importSVG.call(paper.project, svgPath, _options);
+	return paper.project.importSVG.call(paper.project, svgPath, _options);
 }
 
 /* load animations from external json */
@@ -131,6 +132,7 @@ Danimator.load = function danimatorLoad(aniName) {
 			console.warn('Animations "' + filename + '" couldn\'t be loaded :(');
 		}
 	}).fail(function(promise, type, error){ console.error(error); });
+	return Danimator;
 }
 
 /* helper to manually trigger loaded animations */
@@ -344,6 +346,7 @@ Danimator.play = function danimatorPlay(item, options) {
 /* interrupt frame animations */
 Danimator.stop = function danimatorStop(item) {
 	item.data._playing = false;
+	return Danimator;
 }
 
 /* stop all animations on passed item */
@@ -354,6 +357,7 @@ Danimator.stopAll = function danimatorStopAll(item) {
 	});
 	item.data._playing = false;
 	delete item.data._animate;
+	return Danimator;
 };
 
 
@@ -437,7 +441,7 @@ Danimator.morph = function danimatorMorph(fromItem, toItem, duration, options) {
 	if(Danimator.onMorph) Danimator.onMorph(newItem, options);
 
 	/* start normal animate call from 0 to 1 and hook into onStep */
-	Danimator(newItem, 'data.morphing', 0, 1, duration, {
+	return Danimator(newItem, 'data.morphing', 0, 1, duration, {
 		onStep: function(progress) {
 			if(progress === 0 || progress === 1) {				// if at beginning or end of animation
 				[fromItem, toItem][progress].visible = true;	// show either fromItem or toItem, consecutively

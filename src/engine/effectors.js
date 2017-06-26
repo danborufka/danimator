@@ -20,12 +20,12 @@ Danimator.Effector = function danimatorEffector(config) {
 
 	self.styles = {
 		'outline': {
-			fillColor: 		new paper.Color('#D3A612').fade(.2),
-		    strokeColor: 	'#D3A612',
+			fillColor: 		new paper.Color('#FEBF14').fade(.2),
+		    strokeColor: 	'#FEBF14',
 		    strokeWidth: 	1 / paper.project.view.zoom
 		},
 		'fill': {
-			fillColor: 		'#D3A612',
+			fillColor: 		'#FEBF14',
 		    strokeColor: 	'white',
 		}
 	};
@@ -41,9 +41,10 @@ Danimator.Effector = function danimatorEffector(config) {
 		if(_.get(config, 'settings.visualize')) {
 			if(config.position) {
 				self.icon = new paper.Raster({
-				    source: 	self.iconPath,
-				    position: 	config.position
-				});
+				    source: 	config.iconPath,
+				    position: 	config.position,
+				    scaling: 	.5
+				}).bringToFront();
 			}
 		}
 		return _.extend(self, config);
@@ -52,6 +53,7 @@ Danimator.Effector = function danimatorEffector(config) {
 	self.enable = function() {
 		self._active = true;
 		paper.view.on('frame', self.apply);									// attach frame handler to apply Effector
+		self.icon.position = self.position;
 		self.update();
 		return self;
 	};
@@ -60,6 +62,28 @@ Danimator.Effector = function danimatorEffector(config) {
 		self._active = false;
 		paper.view.off('frame', self.apply);
 		self.visualizer && self.visualizer.remove();
+		return self;
+	};
+
+	self.redraw = function() {
+		if(self.visualizer) {
+			self.visualizer.on({
+				mouseenter: function(event) {
+								if(!event.event.buttons) {
+									Danimator.stopAll(self.visualizer).animate(self.visualizer, 'opacity', null, 1, .3);
+								}
+								event.event.preventDefault();
+								event.event.stopImmediatePropagation();
+							},
+				mouseleave: function(event) {
+								if(!event.event.buttons) {
+									Danimator.stopAll(self.visualizer).animate(self.visualizer, 'opacity', null, 0, .3);
+								}
+								event.event.preventDefault();
+								event.event.stopImmediatePropagation();
+							}
+			}).bringToFront().opacity = 0;
+		}
 		return self;
 	};
 
@@ -115,7 +139,6 @@ Danimator.Effector.Magnet = function danimatorMagnetEffector(config) {
 		radius: 		10
 	}, config, {
 		name: 			'Magnet',
-		_active: 		true,
 		iconPath: 		'http://res.cloudinary.com/dantheman/image/upload/v1498383905/effectors/magnet.png'
 	}));
 
@@ -231,13 +254,14 @@ Danimator.Effector.Magnet = function danimatorMagnetEffector(config) {
 		var positionSize = 10/paper.project.view.zoom;
 		var positionCtrl = new paper.Shape.Rectangle({
 			name: 		'positionCtrl',
+			opacity: 	0,
 			position: 	self.position.subtract(positionSize/2), 
 			size: 		new paper.Size(positionSize, positionSize),
 			style: 		self.styles.outline
 		});
 		positionCtrl.onMouseDrag = function(event) {
 			ctrls.position = event.point;
-			self.position = event.point;
+			self.position = self.icon.position = event.point;
 			self.update();
 		}
 		positionCtrl.onMouseDown = function(event) {
@@ -285,6 +309,7 @@ Danimator.Effector.Magnet = function danimatorMagnetEffector(config) {
 		ctrls.bringToFront();
 
 		self.visualizer = ctrls;
+		self.redraw();
 		return self;
 	}
 
@@ -315,7 +340,6 @@ Danimator.Effector.Noise = function danimatorNoiseEffector(config) {
 		radius: 		10
 	}, config, {
 		name: 			'Noise',
-		_active: 		true,
 		iconPath: 		''
 	}));
 
