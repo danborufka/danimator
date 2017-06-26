@@ -42,6 +42,13 @@ html, body {
   height: 100%;
   width: 100%; }
 
+.scroll-container {
+  display: block;
+  overflow: auto;
+  padding-right: 20px;
+  position: relative;
+  width: 100%; }
+
 canvas[resize] {
   height: 100%;
   width: 100%; }
@@ -56,15 +63,15 @@ canvas[resize] {
   touch-action: none; }
 
 /* initial panel positions */
-#properties,
-#layers {
+#properties-panel,
+#layers-panel {
   top: 20px; }
 
-#audio,
-#layers {
+#audio-panel,
+#layers-panel {
   left: 20px; }
 
-#audio {
+#audio-panel {
   top: 400px;
   max-width: 300px; }
 
@@ -122,23 +129,23 @@ canvas[resize] {
     padding: 0; }
     .panel ul.main {
       max-height: 400px;
-      overflow: auto; }
+      min-width: 100%; }
       .panel ul.main > li > label {
         padding-left: 10px; }
       .panel ul.main ul {
         display: none; }
         .prop .panel ul.main ul label {
           padding-left: 5px; }
-  .panel#properties {
+  .panel#properties-panel {
     left: 240px; }
-    .panel#properties ul.main {
+    .panel#properties-panel ul.main {
       border-top: 1px solid #ccc;
       border-bottom: 1px solid #ccc; }
-      .panel#properties ul.main li {
+      .panel#properties-panel ul.main li {
         padding: 0;
         margin-bottom: -1px;
         margin-top: -1px; }
-        .panel#properties ul.main li > input {
+        .panel#properties-panel ul.main li > input {
           border: 1px solid #fff;
           border-left: 1px solid #ccc;
           margin-top: -1px;
@@ -146,12 +153,12 @@ canvas[resize] {
           padding-top: 1px;
           padding-bottom: 1px;
           width: calc(50% - 3px); }
-        .panel#properties ul.main li.prop > label {
+        .panel#properties-panel ul.main li.prop > label {
           display: inline-block;
           width: calc(50% - 10px); }
-    .panel#properties input[type=checkbox] {
+    .panel#properties-panel input[type=checkbox] {
       margin: 0; }
-    .panel#properties input[type="color"] {
+    .panel#properties-panel input[type="color"] {
       -webkit-appearance: none;
       border: 1px solid #666;
       float: right;
@@ -159,48 +166,48 @@ canvas[resize] {
       margin-top: 2.5px;
       padding: 0;
       width: 12px; }
-      .panel#properties input[type="color"]::-webkit-color-swatch-wrapper {
+      .panel#properties-panel input[type="color"]::-webkit-color-swatch-wrapper {
         padding: 0; }
-      .panel#properties input[type="color"]::-webkit-color-swatch {
+      .panel#properties-panel input[type="color"]::-webkit-color-swatch {
         border: none; }
-    .panel#properties select {
+    .panel#properties-panel select {
       width: calc(50% - 3px); }
-    .panel#properties .animated input,
-    .panel#properties .animated select {
+    .panel#properties-panel .animated input,
+    .panel#properties-panel .animated select {
       background-color: #FEBEC1; }
-    .panel#properties .animated.keyed input,
-    .panel#properties .animated.keyed select {
+    .panel#properties-panel .animated.keyed input,
+    .panel#properties-panel .animated.keyed select {
       background-color: #FC7580; }
-    .panel#properties .triggered input, .panel#properties .triggered select {
+    .panel#properties-panel .triggered input, .panel#properties-panel .triggered select {
       background-color: #E4ACFE; }
-    .panel#properties .triggered.keyed input, .panel#properties .triggered select {
+    .panel#properties-panel .triggered.keyed input, .panel#properties-panel .triggered select {
       background-color: #C653FF; }
-  .panel#keyframes {
+  .panel#animations-panel {
     min-width: 300px;
     right: 20px;
     top: 20px; }
-    .panel#keyframes .animate-btn {
+    .panel#animations-panel .animate-btn {
       color: red;
       display: none;
       margin-top: -1px; }
-      .panel#keyframes .animate-btn:before {
+      .panel#animations-panel .animate-btn:before {
         content: "&bullet;";
         color: red;
         display: inline;
         font-size: 21px; }
-    .panel#keyframes time {
+    .panel#animations-panel time {
       white-space: nowrap; }
-      .panel#keyframes time br {
+      .panel#animations-panel time br {
         display: none; }
-    .panel#keyframes .zoom {
+    .panel#animations-panel .zoom {
       float: right;
       width: 50px;
       margin-right: 10px;
       margin-top: 1px; }
-    .panel#keyframes.hasSelection .animate-btn {
+    .panel#animations-panel.hasSelection .animate-btn {
       display: block;
       height: 19px; }
-    .panel#keyframes li {
+    .panel#animations-panel li {
       padding-left: 5px; }
   .panel li.audio {
     background-color: #444;
