@@ -40,9 +40,13 @@ html, body {
 .scroll-container {
   display: block;
   overflow: auto;
-  padding-right: 20px;
-  position: relative;
-  width: 100%; }
+  position: relative; }
+  .scroll-container.scroll-vertical {
+    height: 100%;
+    padding-bottom: 20px; }
+  .scroll-container.scroll-horizontal {
+    width: 100%;
+    padding-right: 20px; }
 
 canvas[resize] {
   height: 100%;
@@ -58,7 +62,9 @@ canvas[resize] {
   touch-action: none; }
 
 /* initial panel positions */
-#properties-panel,
+#properties-panel {
+  top: 20px; }
+
 #layers-panel {
   top: 20px; }
 
@@ -235,7 +241,6 @@ canvas[resize] {
 
 .panel .toggleGroup {
   cursor: pointer;
-  float: right;
   margin-right: 0px;
   margin-top: 2px;
   padding: 0 6px; }

@@ -48,9 +48,15 @@ html,body {
 .scroll-container 		{
 							display: 				block;
 							overflow: 				auto;
-							padding-right: 			20px;		// anti scrollbar
 							position: 				relative;
+	&.scroll-vertical	{
+							height: 				100%;
+							padding-bottom: 		20px;		// anti scrollbar
+	}
+	&.scroll-horizontal	{
 							width: 					100%;
+							padding-right: 			20px;		// anti scrollbar
+	}
 }
 
 canvas[resize] 			{
@@ -69,10 +75,8 @@ canvas[resize] 			{
 }
 
 /* initial panel positions */
-#properties-panel,
-#layers-panel 			{
-							top: 					20px;
-}
+#properties-panel 		{	top: 					20px; 	}
+#layers-panel 			{	top: 					20px;	}
 #audio-panel,
 #layers-panel 			{
 							left: 					20px;
