@@ -5,6 +5,8 @@
  // global list of available effectors
 Danimator.Effectors = ['Magnet'];
 
+var _effectorDragging = false;
+
 Danimator.Effector = function danimatorEffector(config) {
 	var self = this;
 
@@ -53,7 +55,7 @@ Danimator.Effector = function danimatorEffector(config) {
 	self.enable = function() {
 		self._active = true;
 		paper.view.on('frame', self.apply);									// attach frame handler to apply Effector
-		self.icon.position = self.position;
+		self.icon && (self.icon.position = self.position);
 		self.update();
 		return self;
 	};
@@ -70,19 +72,17 @@ Danimator.Effector = function danimatorEffector(config) {
 			self.visualizer.on({
 				mouseenter: function(event) {
 								if(!event.event.buttons) {
-									Danimator.stopAll(self.visualizer).animate(self.visualizer, 'opacity', null, 1, .3);
+									self.visualizer.opacity = 1;
 								}
-								event.event.preventDefault();
-								event.event.stopImmediatePropagation();
 							},
 				mouseleave: function(event) {
-								if(!event.event.buttons) {
-									Danimator.stopAll(self.visualizer).animate(self.visualizer, 'opacity', null, 0, .3);
+								if(event.event.buttons || _effectorDragging) {
+									self.visualizer.opacity = 1;
+								} else {
+									self.visualizer.opacity = 0;
 								}
-								event.event.preventDefault();
-								event.event.stopImmediatePropagation();
 							}
-			}).bringToFront().opacity = 0;
+			}).bringToFront();
 		}
 		return self;
 	};
@@ -104,7 +104,7 @@ Danimator.Effector = function danimatorEffector(config) {
 	return self.init(config);
 }
 
-Danimator.Effector.elasticRestitution = function(factor) {
+Danimator.Effector.elasticRestitution = _.throttle(function(factor) {
 	return function(segment, origPos) {
 		if(!segment.restituted) {
 			segment.restitution = (segment.restitution || 0.1) * (factor || 1.1);
@@ -117,7 +117,7 @@ Danimator.Effector.elasticRestitution = function(factor) {
 			}
 		}
 	}
-}
+}, 1/24, { trailing: true });
 
 
 
@@ -245,9 +245,13 @@ Danimator.Effector.Magnet = function danimatorMagnetEffector(config) {
 			style: 		self.styles.fill
 		});
 		radiusCtrl.onMouseDrag = function(event) {
+			_effectorDragging = true;
 			radiusCtrl.position = event.point;
 			self.radius = event.point.getDistance(self.position);
 			self.update(event);
+		}
+		radiusCtrl.onMouseUp = function() {
+			_effectorDragging = false;
 		}
 		Danimator.handlers.attach(radiusCtrl, 'hover');
 
@@ -260,14 +264,17 @@ Danimator.Effector.Magnet = function danimatorMagnetEffector(config) {
 			style: 		self.styles.outline
 		});
 		positionCtrl.onMouseDrag = function(event) {
+			_effectorDragging = true;
 			ctrls.position = event.point;
-			self.position = self.icon.position = event.point;
+			self.position = event.point;
+			self.icon && (self.icon.position = event.point);
 			self.update();
 		}
 		positionCtrl.onMouseDown = function(event) {
 			self.magnitude = 1;
 		}
 		positionCtrl.onMouseUp = function(event) {
+			_effectorDragging = false;
 			self.magnitude = 0;
 		}
 		Danimator.handlers.attach(positionCtrl, 'hover');
@@ -283,11 +290,13 @@ Danimator.Effector.Magnet = function danimatorMagnetEffector(config) {
 			self.falloff = event.point.getDistance(self.position) / self.radius;
 
 			_falloffDragging = true;
+			_effectorDragging = true;
 
 			self.update();
 		}
 		fallfoffCtrl.onMouseUp = function() {
 			_falloffDragging = false;
+			_effectorDragging = false;
 			radiusViz.style = self.styles.outline;
 		}
 		Danimator.handlers.attach(fallfoffCtrl, 'hover');
@@ -326,7 +335,7 @@ Danimator.Effector.Magnet = function danimatorMagnetEffector(config) {
 			}),
 		};
 		segmentViz.data.class = 'segmentViz';
-		self.visualizer.addChild(segmentViz);
+		self.visualizer && self.visualizer.addChild(segmentViz);
 		segmentViz.sendToBack();
 	}
 
