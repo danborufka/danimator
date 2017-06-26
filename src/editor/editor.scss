@@ -61,15 +61,15 @@ canvas[resize] 			{
 }
 
 /* initial panel positions */
-#properties,
-#layers 				{
+#properties-panel,
+#layers-panel 			{
 							top: 					20px;
 }
-#audio,
-#layers 				{
+#audio-panel,
+#layers-panel 			{
 							left: 					20px;
 }
-#audio 					{
+#audio-panel			{
 							top: 					400px;
 							max-width: 				300px;
 }
@@ -114,16 +114,68 @@ canvas[resize] 			{
 							cursor: 				grabbing;
 	}
 
+	.toggleGroup 		{
+							cursor: 				pointer;
+							float: 					right;
+							margin-right: 			0px;
+						    margin-top: 			2px;
+						    padding: 				0 6px;
+		&::before 		{
+							content: 				"\f0da";
+		}
+	}
+
+	li 					{
+							list-style: 			none;
+							padding-top: 			2px;
+							padding-bottom: 		2px;
+							padding-left: 			2px;
+							background-color: 		rgba(245, 235, 225, 0.77);
+							border-top: 			1px solid #D2CAC1;
+							border-bottom: 			1px solid #D2CAC1;
+							margin-bottom: 			1px;
+							transition: 			.1s all;
+		&.selected 		{
+							background-color: 		#A78F78;
+							color: 					#fff;
+		}
+
+		li 				{
+							margin-bottom: 			-1px;
+		}
+	}
+
+	li.open > 
+	.toggleGroup:before {
+							content: 				"\f0d7";
+	}
+
+	.visible:before 	{
+							content: 				"\f06e";
+							display: 				inline-block;
+							padding: 				0 5px;
+	}
+
+	.layer 				{
+							cursor: 				pointer;
+		&.hidden 		{
+							opacity: 				.5;
+			.visible:before {
+							content: 				"\f070";
+			}
+		}
+	}
+
 	> label 			{
-							background-color: 	#666;
-							color: 				#fff;
-							cursor: 			-webkit-grab;
-							cursor: 			grab;
-							display: 			block;
-							font-size: 			10px;
-							padding: 			5px;
-							text-transform: 	uppercase;
-							width: 				calc(100% - 10px);
+							background-color: 		#666;
+							color: 					#fff;
+							cursor: 				-webkit-grab;
+							cursor: 				grab;
+							display: 				block;
+							font-size: 				10px;
+							padding: 				5px;
+							text-transform: 		uppercase;
+							width: 					calc(100% - 10px);
 		.toggle 		{
 							cursor: 				pointer;
 							float: 					right;
@@ -143,8 +195,8 @@ canvas[resize] 			{
 	ul 					{
 							padding: 				0;
 		&.main 			{
-							max-height: 		400px;
-							overflow: 			auto;
+							max-height: 			400px;
+							overflow: 				auto;
 			> li > label{
 							padding-left: 			10px;
 			}
@@ -158,22 +210,22 @@ canvas[resize] 			{
 		}
 	}
 
-	&#properties 		{	left: 					240px;
+	&#properties-panel 	{	left: 					240px;
 		ul.main 		{
-							border-top: 		1px solid #ccc;
-							border-bottom: 		1px solid #ccc;
+							border-top: 			1px solid #ccc;
+							border-bottom: 			1px solid #ccc;
 			li 			{
-							padding: 			0;	
-							margin-bottom: 		-1px;
-							margin-top: 		-1px;
+							padding: 				0;	
+							margin-bottom: 			-1px;
+							margin-top: 			-1px;
 				> input {
-							border: 			1px solid #fff;
-							border-left: 		1px solid #ccc;
-							margin-top: -		1px;
-							padding-left: 		5px;
-							padding-top: 		1px;
-							padding-bottom: 	1px;
-							width: 				calc(50% - 3px);
+							border: 				1px solid #fff;
+							border-left: 			1px solid #ccc;
+							margin-top: -			1px;
+							padding-left: 			5px;
+							padding-top: 			1px;
+							padding-bottom: 		1px;
+							width: 					calc(50% - 3px);
 				}
 
 				&.prop  {
@@ -235,7 +287,7 @@ canvas[resize] 			{
 		}
 	}
 							
-	&#keyframes 		{
+	&#animations-panel	{
 							min-width: 				300px;
 							right: 					20px;
 							top: 					20px;
@@ -311,59 +363,11 @@ canvas[resize] 			{
 							opacity: 		1;
 }
 
-.panel .toggleGroup 	{
-							cursor: 		pointer;
-							float: 			right;
-							margin-right: 	0px;
-						    margin-top: 	2px;
-						    padding: 		0 6px;
-	&::before 			{
-							content: 		"\f0da";
-	}
-}
-.panel li.open > .toggleGroup:before {
-	content: "\f0d7";
-}
-
-.panel .visible:before {
-							content: 		"\f06e";
-							display: 		inline-block;
-							padding: 		0 5px;
-}
-
-.panel .layer {
-							cursor: 		pointer;
-	&.hidden 			{
-							opacity: 		.5;
-		.visible:before {
-							content: 		"\f070";
-		}
-	}
-}
-
 .panel li.open > ul {
 	background-color: rgba(0,0,0,.2);
 	display: block;
 	margin-top: 3px;
 	margin-left: 10px;
-}
-.panel li 				{
-							list-style: 	none;
-							padding-top: 	2px;
-							padding-bottom: 2px;
-							padding-left: 	2px;
-							background-color: rgba(245, 235, 225, 0.77);
-							border-top: 1px solid #D2CAC1;
-							border-bottom: 1px solid #D2CAC1;
-							margin-bottom: 1px;
-							transition: .1s all;
-	&.selected 			{
-							background-color: #A78F78;
-							color: #fff;
-	}
-	li 					{
-							margin-bottom: -1px;
-	}
 }
 
 .panel .timeline {

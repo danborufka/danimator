@@ -14,10 +14,8 @@ var FLAGS 			= {					// see _panels.js for usage example
 	}
 };
 
-var layerTemplate;
-var keyItemTemplate;
-var propItemTemplate;
-var audioTemplate;
+var _panels 		= ['layers', 'animations', 'audio', 'properties'];
+var _panelTemplates = [];
 
 // create special set for selections within our scene
 var selectedElements = sceneSelection();
@@ -989,11 +987,12 @@ jQuery(function($){
 		});
 		//*/
 
-	/* temporarily save all "reactive" DOM elements */
-	layerTemplate 	 = $('template#layer-panel-item')[0].content.children[0].outerHTML;
-	keyItemTemplate  = $('template#keyframe-panel-item')[0].content.children[0].outerHTML;
-	propItemTemplate = $('template#property-panel-item')[0].content.children[0].outerHTML;
-	audioTemplate 	 = $('template#audio-panel-item')[0].content.children[0].outerHTML;
+	/* save all "reactive" DOM elements as local vars */
+	_panelTemplates['layers'] 		= document.getElementById('#layers-panel-item').content.children[0].outerHTML;
+	_panelTemplates['animations'] 	= document.getElementById('template#animations-panel-item').content.children[0].outerHTML;
+	_panelTemplates['properties'] 	= document.getElementById('template#properties-panel-item').content.children[0].outerHTML;
+	_panelTemplates['audio'] 		= document.getElementById('template#audio-panel-item').content.children[0].outerHTML;
+
 	$time 			 = $('#keyframes .description time');
 	$animationValue  = $('#keyframes .description output');
 });
@@ -1307,7 +1306,7 @@ function _createProperties(properties, $props, item, subitem, path) {
 
 /* create waves (UI) for audio panel */
 function _createAudio() { 
-	var $sounds 	= $('.panel#audio').find('ul.main').empty();
+	var $sounds 	= $('.panel#audios').find('ul.main').empty();
 	var audioTmpl 	= _.template(_.unescape(audioTemplate));
 	var wave 		= false;
 
@@ -1674,7 +1673,7 @@ Game.onLoad = function(project, name, options) {
 
 	_createLayers(layers, $('.panel#layers ul').empty());
 
-	if(!Danimator.sound) $('.panel#audio').hide();
+	if(!Danimator.sound) $('.panel#audios').hide();
 
 	$('body').addClass('ready');
 
