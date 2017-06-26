@@ -662,6 +662,13 @@ paper.Item.inject({
 		return _.get(this.data, '_states', {});
 	},
 });
+paper.Color.inject({
+	fade: function(value) {
+		var faded = this.clone();
+		faded.alpha = value;
+		return faded;
+	}
+});
 
 /* init values for Danimator props */
 Danimator.interactive 	= false;					// interactive mode suppresses checks of animationEnd and thus never removes them from stack
