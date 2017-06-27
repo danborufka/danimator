@@ -1267,11 +1267,11 @@ jQuery(function($){
 						}
 						Danimator.time = time;
 					}
-
-					event.preventDefault();
-					event.stopImmediatePropagation();
 				}
 			});
+			event.preventDefault();
+			event.stopImmediatePropagation();
+			return false;
 		})
 		// file dropping 
 		.on('dragover', 'body', function(event) { 
