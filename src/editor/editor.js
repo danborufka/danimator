@@ -2,37 +2,39 @@
 // TODOS:
 // o check layers vs. groups (reimport from Illu)
 
+var currentGame;
 var tracks   		= {};
 var events 			= {};
 
-var currentGame;
-
 var TIME_FACTOR 	= 10;
-var FLAGS 			= {					// see _panels.js for usage example
+var FLAGS 			= {					// see panels.js for usage example
 	view: {
 		selection: true
 	}
 };
+var _PANELS 		= {
+	layers: 	{}, 
+	animations: {}, 
+	audio: 		{},
+	properties: {}
+};
 
-var _panels 		= ['layers', 'animations', 'audio', 'properties'];
-var _panelTemplates = [];
+var _loadingStates 	= [];
+var _snapKeyframes 	= new Snappables(.4);
 
-// create special set for selections within our scene
+/* create special set to store selections within our scene */
 var selectedElements = sceneSelection();
 
+/* Paper.js item & jQuery references */
 var $time;
 var $animationValue;
 var $currentTrack;
+var _anchorViz;
 
-var snapKeyframes 	= new Snappables(.4);
-
-var currentSpeed = 1;
-
+/* states */
 var _playing 		= false;
 var _frameDragging 	= false;
 var _timeScrubbing  = false;
-
-var _anchorViz;
 
 /* basic configs for creation of inputs in property panel */
 var _ANIMATABLE_COLORS = {
@@ -132,6 +134,7 @@ var ANIMATABLE_PROPERTIES = {
 	PointText: 	_.extend({}, _ANIMATABLE_DEFAULTS, _ANIMATABLE_GEOMETRY)
 }
 
+/* styles for blueish highlighting of paths onHover */
 var _HOVER_STYLES = {
 	PATHS: {
 		opacity: 	 1,
@@ -146,8 +149,7 @@ var _HOVER_STYLES = {
 	}
 };
 
-var LOADING_STATES = [];
-
+/* internal helper funcs */
 var _isBoundsItem = function(item) {
 	return ['PlacedSymbol', 'Group', 'SymbolItem', 'Raster'].indexOf(item.className) >= 0;
 };
@@ -158,7 +160,6 @@ var _normalizeCaller = function(caller) {
 	return caller;
 }
 
-/* helpers for internal panel calcs */
 function _asGroup(config) {
 	return { 
 		content: config,
@@ -208,7 +209,7 @@ function _changesFile(filetype) {
 	_.set(currentGame.files[filetype], 'saved', false);
 }
 function _changesProp(prop, value) {
-	var $input = $('#properties').find('input[data-prop="' + prop + '"]');
+	var $input = $('#properties-panel').find('input[data-prop="' + prop + '"]');
 	if(typeof value === 'boolean') {
 		$input.prop('checked', value);
 	} else {
@@ -230,16 +231,16 @@ function _getAnimationName(item, property, type) {
 }
 /* internal helper to deselect all paperJS items and update panels accordingly */
 function _resetSelection() {
-	$('#layers')
+	$('#layers-panel')
 		.find('.layer').removeClass('selected').end()
 		.find('ul.main').scrollTop(0);
 
 	selectedElements.unselect(currentGame.project);
 	_anchorViz.visible = false;
 
-	var emptyState = _.template(_.unescape($('#property-panel-empty-item')[0].content.children[0].outerHTML));
+	var emptyState = _.template(_.unescape($('#properties-panel-empty-item')[0].content.children[0].outerHTML));
 
-	$('#properties')
+	$('#properties-panel')
 		.find('.type').text('').end()
 		.find('ul.main').html(emptyState({ checked: FLAGS.view.selection }));
 }
@@ -253,72 +254,20 @@ function noop(anything) { return anything; };
 
 /* helpers for loading states */
 function setLoading(label, element) {
-	if(LOADING_STATES.indexOf(label) < 0) {
-		LOADING_STATES.push(label);
+	if(_loadingStates.indexOf(label) < 0) {
+		_loadingStates.push(label);
 	}
-	if(LOADING_STATES.length) {
+	if(_loadingStates.length) {
 		$(element || 'body').addClass('loading');
 	}
 }
 function resetLoading(label, element) {
-	if(LOADING_STATES.indexOf(label) >= 0) {
-		_.pull(LOADING_STATES, label);
+	if(_loadingStates.indexOf(label) >= 0) {
+		_.pull(_loadingStates, label);
 	}
-	if(!LOADING_STATES.length) {
+	if(!_loadingStates.length) {
 		$(element || 'body').removeClass('loading');
 	}
-}
-
-/* jQuery helpers to get/set the boundaries of an element */
-$.fn.left = function(x) {
-	var $this = $(this);
-	if(x) return $this.offset({ left: x });
-	return $this.offset().left;
-}
-$.fn.right = function(x) {
-	var $this = $(this);
-	if(x) return $this.offset({ left: x - $this.width() });
-	return $this.offset().left + $this.width();
-}
-$.fn.top = function(y) {
-	var $this = $(this);
-	if(y) return $this.offset({ top: y });
-	return $this.offset().top;
-}
-$.fn.bottom = function(y) {
-	var $this = $(this);
-	if(y) return $this.offset({ top: y - $this.height() });
-	return $this.offset().top + $this.height();
-}
-
-/* class to handle snapping points */
-function Snappables(tolerance) {
-	var self = this;
-	
-	self.list 		= [];
-	self.tolerance 	= tolerance;
-
-	self.add = function(snap) {
-		if(!_.isArray(snap)) snap = [snap];
-		self.list = _.union(self.list, snap);
-		return self;
-	};
-	self.remove = function(snap) {
-		self.list = _.pull(self.list, snap);
-		return self;
-	};
-	self.snap = function(value) {
-		var result = value;
-		self.list = self.list.sort();
-		_.each(self.list, function(item) {
-			if(Math.abs(item - value) < self.tolerance) {
-				result = item;
-				return false;
-			}
-		});
-		return result;
-	};
-	return self;
 }
 
 /* override animate method to add animations to animation stack for keyframes panel */
@@ -414,7 +363,7 @@ Danimator.onStep = function danimatorStep(animatable, value) {
 }
 /* update layers panel when morphing is triggered */
 Danimator.onMorph = function() {
-	_createLayers(Danimator.layers, $('.panel#layers ul').empty());
+	_createLayers(Danimator.layers, $('#layers-panel ul').empty());
 }
 
 Danimator.save = function danimatorSave(data, filename) {
@@ -442,8 +391,21 @@ jQuery(function($){
 	var lastOffset;
 	var lastTime = 0;
 
-	var $keyframesPanel = $('#keyframes');
-	var $propertiesPanel = $('#properties');
+	var $keyframesPanel = $('#animations-panel');
+	var $propertiesPanel = $('#properties-panel');
+
+		/* save all "reactive" DOM elements as local vars */
+	_.each(_PANELS, function(store, panel) {
+		// create templating function from template#*-panel-item
+		var _tmpl = document.getElementById(panel + '-panel-item').content.children[0].outerHTML;
+
+		store.template = _.template(_.unescape( _tmpl ));
+		store.$element = $('#' + panel + '-panel');
+		return store;
+	});
+	
+	$time 			 = $('#animations-panel .description time');
+	$animationValue  = $('#animations-panel .description output');
 
 	$(document)
 		/* layer-specific events */
@@ -469,7 +431,7 @@ jQuery(function($){
 			}
 
 			/* change all parent layer's selected state */
-			var $layers = $('#layers ul.main');
+			var $layers = $('#layers-panel ul.main');
 			var $allParents = $layer.parentsUntil($layers).andSelf().filter('.layer').toggleClass('selected', selected);
 
 			$layers.scrollTop( $layer[0].offsetTop - ($layers.height() - $layer.height()) / 2 );
@@ -590,7 +552,7 @@ jQuery(function($){
 					var t = x / TIME_FACTOR;
 
 					if(event.shiftKey) {
-						t = snapKeyframes.snap(t);
+						t = _snapKeyframes.snap(t);
 					}
 					
 					$currentTrack = $this;
@@ -604,7 +566,7 @@ jQuery(function($){
 			$(this).removeClass('scrubbing');
 		})
 		/* select item and property of doubleclicked keyframe */
-		.on('dblclick', '#keyframes .keyframe', function(event) {
+		.on('dblclick', '#animations-panel .keyframe', function(event) {
 			var $this 	= $(this);
 			var prop 	= $this.closest('li.timeline').data('property');
 			var element = Danimator.sceneElement($this.closest('li.item'));
@@ -612,7 +574,7 @@ jQuery(function($){
 			// trigger selection of corresponding layer
 			element.data.$layer.not('.selected').trigger( $.Event('selected', {item: element.item}) );
 			
-			var $input = $('#properties').find('input[data-prop="' + prop + '"]');
+			var $input = $('#properties-panel').find('input[data-prop="' + prop + '"]');
 			$input.parentsUntil('ul.main').filter('li').addClass('open');
 			$input.focus();
 
@@ -620,7 +582,7 @@ jQuery(function($){
 
 			event.stopImmediatePropagation();
 		})
-		.on('dblclick', '#keyframes .track', function(event) {
+		.on('dblclick', '#animations-panel .track', function(event) {
 			var duration = parseInt(prompt('Please enter a duration (in seconds) for this animation!', '1s'));
 
 			if(duration && !isNaN(duration)) {
@@ -636,7 +598,7 @@ jQuery(function($){
 			}
 		})
 		/* interactivity of property inputs */
-		.on('change', '#properties :input', function() {
+		.on('change', '#properties-panel :input', function() {
 			if(selectedElements.size) {
 				var $this 	 = $(this);
 				var prop  	 = $this.data('prop');
@@ -727,7 +689,7 @@ jQuery(function($){
 				$this.data('oldValue', value);
 			}
 		})
-		.on('keyup', '#properties :input', function(event) {
+		.on('keyup', '#properties-panel :input', function(event) {
 			/* use shiftKey + arrow keys to jump in tens instead of ones */
 			if(event.shiftKey) {
 				var delta = 0;
@@ -758,7 +720,7 @@ jQuery(function($){
 			}
 		})
 		/* allow number manipulation using the mousewheel (with a small lag) */
-		.on('mousewheel', '#properties :input', _.debounce(function(event) {
+		.on('mousewheel', '#properties-panel :input', _.debounce(function(event) {
 			$(this).trigger('change');
 		}, 600))
 		.on('dblclick', '.panel .audio', function() {
@@ -853,12 +815,12 @@ jQuery(function($){
 						break;
 					case 'o':
 						if(selectedElements.size) {
-							$('#properties input[data-prop=opacity]').focus()[0].select();
+							$('#properties-panel input[data-prop=opacity]').focus()[0].select();
 						}
 						break;
 					case 'r':
 						if(selectedElements.size) {
-							$('#properties input[data-prop=rotation]').focus()[0].select();
+							$('#properties-panel input[data-prop=rotation]').focus()[0].select();
 						}
 						break;
 					case 's':
@@ -926,7 +888,7 @@ jQuery(function($){
 				if(Math.abs(delta.x) > 0.1) {
 					var time = Danimator.time + delta.x * 1/24;
 					if(event.shiftKey) {
-						time = snapKeyframes.snap(time);
+						time = _snapKeyframes.snap(time);
 					}
 					Danimator.time = time;
 				}
@@ -985,26 +947,14 @@ jQuery(function($){
 			event.stopImmediatePropagation();
 			$('#dummy').removeClass('dropping'); 	
 		});
-		//*/
-
-	/* save all "reactive" DOM elements as local vars */
-	_panelTemplates['layers'] 		= document.getElementById('#layers-panel-item').content.children[0].outerHTML;
-	_panelTemplates['animations'] 	= document.getElementById('template#animations-panel-item').content.children[0].outerHTML;
-	_panelTemplates['properties'] 	= document.getElementById('template#properties-panel-item').content.children[0].outerHTML;
-	_panelTemplates['audio'] 		= document.getElementById('template#audio-panel-item').content.children[0].outerHTML;
-
-	$time 			 = $('#keyframes .description time');
-	$animationValue  = $('#keyframes .description output');
 });
 
 /* create layers (UI) for layer panel */
 function _createLayers(layers, $layers) {
-	var layerTmpl  = _.template(_.unescape(layerTemplate));	// create templating function from template#layer-panel-item
-
 	_.each(layers, function(layer, index) {
 		if(layer) {
 			var sceneElement = Danimator.sceneElement(layer);
-			var $layer = $(layerTmpl({
+			var $layer = $(_PANELS.layers.template({
 							name: 			layer.name || ('[Layer ' + layer.id + ']'),
 							hasChildren: 	!!(layer.children && layer.children.length),
 							hidden: 		!layer.visible,
@@ -1099,16 +1049,15 @@ function _getEndStyle(property, track, type) {
 
 /* create timeline tracks (UI) for keyframes panel */
 function _createTracks() {
-	// create templating function from template[id=keyframe-panel-item]
-	var keyItemTmpl = _.template(_.unescape(keyItemTemplate));
-	var $tracks 	= $('#keyframes ul.main').empty();
+	var $tracks 	= $('#animations-panel ul.main').empty();
 
 	_.each(tracks, function(track) {
 		if(track) {
 			var properties = _.mapValues(track.properties, _.partial(_.sortBy, _, 'options.delay'));
 			var sceneElement = Danimator.sceneElement(track.item);
 
-			var $keys = $(keyItemTmpl({
+			var $keys = $(_PANELS.animations.template({
+					Danimator: 		Danimator,
 					maxDuration: 	_.round(track.maxDuration, 2),
 					name: 			track.item.name,
 					type: 			track.item.className,
@@ -1129,7 +1078,7 @@ function _createTracks() {
 			var $frames = $tracks.append($keys).find('.keyframe');
 
 			// add all full seconds to the snapping steps of keyframes
-			snapKeyframes.list = _.range(Danimator.maxDuration);
+			_snapKeyframes.list = _.range(Danimator.maxDuration);
 
 			$frames.each(function() {
 				var $this = $(this);
@@ -1143,7 +1092,7 @@ function _createTracks() {
 				var $nextRange = $this.next('.range');
 
 				// add keyframe's time to snapping steps 
-				snapKeyframes.add( keyTime );
+				_snapKeyframes.add( keyTime );
 
 				$this.draggable({ 
 					containment: [ $lastRange.left() + 1, _y, $nextRange.right() - 1, _y],
@@ -1179,7 +1128,7 @@ function _createTracks() {
 
 						/* snap to snapping points onShiftHold */
 						if(event.shiftKey) {
-							newTime = snapKeyframes.snap(newTime);
+							newTime = _snapKeyframes.snap(newTime);
 							x = newTime * TIME_FACTOR;
 							ui.position.left = x + 1;
 						}
@@ -1207,8 +1156,6 @@ function _createTracks() {
 
 /* create properties (UI) for properties panel */
 function _createProperties(properties, $props, item, subitem, path) {
-	var propTmpl  = _.template(_.unescape(propItemTemplate));
-
 	// make sure path ends in dot
 	path = path ? _.trim(path, '.') + '.' : '';
 
@@ -1292,7 +1239,7 @@ function _createProperties(properties, $props, item, subitem, path) {
 			}
 
 			// render template!
-			var $prop = $(propTmpl(config)).data('track', _.first(propertyTrack));
+			var $prop = $(_PANELS.properties.template(config)).data('track', _.first(propertyTrack));
 
 			/* same routine for subelements ("property groups") like e.g. x and y keys of position property */
 			if(config.type === 'group') {
@@ -1306,8 +1253,7 @@ function _createProperties(properties, $props, item, subitem, path) {
 
 /* create waves (UI) for audio panel */
 function _createAudio() { 
-	var $sounds 	= $('.panel#audios').find('ul.main').empty();
-	var audioTmpl 	= _.template(_.unescape(audioTemplate));
+	var $sounds 	= $('#audio-panel').find('ul.main').empty();
 	var wave 		= false;
 
 	_.each(Danimator.sounds, function(sound, name) {
@@ -1323,7 +1269,7 @@ function _createAudio() {
 			progressColor: 	'crimson',
 			waveColor: 		'white'
 		};
-		var $sound = $(audioTmpl({
+		var $sound = $(_PANELS.audio.template({
 			name: name,
 			id: 'audio_' + slug(name)
 		}));
@@ -1406,7 +1352,7 @@ Game.onLoad = function(project, name, options) {
 	}	
 
 	Danimator.onTimeChanged = function danimatorTimeChanged(time) {
-		var $inputs = $('#properties').find('li').removeClass('keyed');
+		var $inputs = $('#properties-panel').find('li').removeClass('keyed');
 
 		/* update all scrubbes */
 		$('.timeline .scrubber').each(function(){
@@ -1671,9 +1617,9 @@ Game.onLoad = function(project, name, options) {
 
 	self.container.appendTop(_anchorViz);
 
-	_createLayers(layers, $('.panel#layers ul').empty());
+	_createLayers(layers, $('#layers-panel ul').empty());
 
-	if(!Danimator.sound) $('.panel#audios').hide();
+	if(!Danimator.sound) $('#audio-panel').hide();
 
 	$('body').addClass('ready');
 

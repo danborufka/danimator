@@ -45,6 +45,20 @@ html,body {
 							width: 					100%;
 }
 
+.scroll-container 		{
+							display: 				block;
+							overflow: 				auto;
+							position: 				relative;
+	&.scroll-vertical	{
+							height: 				100%;
+							padding-bottom: 		20px;		// anti scrollbar
+	}
+	&.scroll-horizontal	{
+							width: 					100%;
+							padding-right: 			20px;		// anti scrollbar
+	}
+}
+
 canvas[resize] 			{
 							height: 				100%;
 							width: 					100%;
@@ -61,15 +75,15 @@ canvas[resize] 			{
 }
 
 /* initial panel positions */
-#properties-panel,
-#layers-panel 			{
-							top: 					20px;
-}
+#properties-panel 		{	top: 					20px; 	}
+#layers-panel 			{	top: 					20px;	}
+
 #audio-panel,
 #layers-panel 			{
 							left: 					20px;
 }
-#audio-panel			{
+
+#audio-panel 			{
 							top: 					400px;
 							max-width: 				300px;
 }
@@ -197,6 +211,7 @@ canvas[resize] 			{
 		&.main 			{
 							max-height: 			400px;
 							overflow: 				auto;
+							min-width: 				100%;
 			> li > label{
 							padding-left: 			10px;
 			}
@@ -362,6 +377,7 @@ canvas[resize] 			{
 							display: 		block;
 							opacity: 		1;
 }
+
 
 .panel li.open > ul {
 	background-color: rgba(0,0,0,.2);
