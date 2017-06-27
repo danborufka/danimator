@@ -913,22 +913,25 @@ jQuery(function($){
 		})
 		/* time scrubbing */
 		.on('mousemove', '.timeline .track', function(event) {
-			if(!_frameDragging)
-				if(_timeScrubbing) {
-					var $this = $(event.currentTarget);
-					var x = event.clientX - $this.offset().left - 1;
-					var t = x / TIME_FACTOR;
+			// wrapping in requestAnimationFrame() to enhance performance (see http://37signals.com/talks/soundslice at 35:40)
+			requestAnimationFrame(function() {
+				if(!_frameDragging)
+					if(_timeScrubbing) {
+						var $this = $(event.currentTarget);
+						var x = event.clientX - $this.offset().left - 1;
+						var t = x / TIME_FACTOR;
 
-					if(event.shiftKey) {
-						t = _snapKeyframes.snap(t);
+						if(event.shiftKey) {
+							t = _snapKeyframes.snap(t);
+						}
+						
+						$currentTrack = $this;
+						Danimator.time = t;
+						
+						// allow sound scrubbing by playing tiny chunks of it while dragging
+						Danimator._activeSound && Danimator._activeSound.wave.play(Danimator.time, Danimator.time + .08);
 					}
-					
-					$currentTrack = $this;
-					Danimator.time = t;
-					
-					// allow sound scrubbing by playing tiny chunks of it while dragging
-					Danimator._activeSound && Danimator._activeSound.wave.play(Danimator.time, Danimator.time + .08);
-				}
+			});
 		})
 		.on('mouseup', '.timeline .track', function(event) {
 			$(this).removeClass('scrubbing');
@@ -1250,20 +1253,23 @@ jQuery(function($){
 		})
 		/* time control with cmdKey + mousewheelX */
 		.on('mousewheel', function(event) {
-			if(event.metaKey) {
-				var delta = { x: event.originalEvent.deltaX, y: event.originalEvent.deltaY };
+			// wrapping in requestAnimationFrame() to enhance performance (see http://37signals.com/talks/soundslice at 35:40)
+			requestAnimationFrame(function() {
+				if(event.metaKey) {
+					var delta = { x: event.originalEvent.deltaX, y: event.originalEvent.deltaY };
 
-				if(Math.abs(delta.x) > 0.1) {
-					var time = Danimator.time + delta.x * 1/24;
-					if(event.shiftKey) {
-						time = _snapKeyframes.snap(time);
+					if(Math.abs(delta.x) > 0.1) {
+						var time = Danimator.time + delta.x * 1/24;
+						if(event.shiftKey) {
+							time = _snapKeyframes.snap(time);
+						}
+						Danimator.time = time;
 					}
-					Danimator.time = time;
-				}
 
-				event.preventDefault();
-				event.stopImmediatePropagation();
-			}
+					event.preventDefault();
+					event.stopImmediatePropagation();
+				}
+			});
 		})
 		// file dropping 
 		.on('dragover', 'body', function(event) { 
@@ -1485,36 +1491,39 @@ function _createTracks() {
 						_createTracks();
 					},
 					drag: 	function(event, ui) { 
-						_frameDragging = true;
+						// wrapping in requestAnimationFrame() to enhance performance (see http://37signals.com/talks/soundslice at 35:40)
+						requestAnimationFrame(function() {
+							_frameDragging = true;
 
-						var x 			= ui.position.left - 1;
-						var index 	 	= $this.closest('.track').find('.keyframe').index($this);
-						var property 	= $this.closest('li.timeline').data('property');
+							var x 			= ui.position.left - 1;
+							var index 	 	= $this.closest('.track').find('.keyframe').index($this);
+							var property 	= $this.closest('li.timeline').data('property');
 
-						currentTrack 	= $this.closest('li.item').data('track').properties[property];
-						newTime 		= x / TIME_FACTOR;
+							currentTrack 	= $this.closest('li.item').data('track').properties[property];
+							newTime 		= x / TIME_FACTOR;
 
-						/* snap to snapping points onShiftHold */
-						if(event.shiftKey) {
-							newTime = _snapKeyframes.snap(newTime);
-							x = newTime * TIME_FACTOR;
-							ui.position.left = x + 1;
-						}
+							/* snap to snapping points onShiftHold */
+							if(event.shiftKey) {
+								newTime = _snapKeyframes.snap(newTime);
+								x = newTime * TIME_FACTOR;
+								ui.position.left = x + 1;
+							}
 
-						Danimator.time = newTime;
+							Danimator.time = newTime;
 
-						var $nextRange 		= $this.next('.range');
-						var $prevRange 		= $this.prev('.range');
-						var $nextKeyframe	= $this.next().next('.keyframe');
+							var $nextRange 		= $this.next('.range');
+							var $prevRange 		= $this.prev('.range');
+							var $nextKeyframe	= $this.next().next('.keyframe');
 
-						var nextRangeDimensions = { left: x };
+							var nextRangeDimensions = { left: x };
 
-						if($nextKeyframe.length) {
-							nextRangeDimensions.width = ($nextKeyframe.data('time') - newTime) * TIME_FACTOR;
-						}
+							if($nextKeyframe.length) {
+								nextRangeDimensions.width = ($nextKeyframe.data('time') - newTime) * TIME_FACTOR;
+							}
 
-						$prevRange.width( x - $prevRange.position().left );
-						$nextRange.css(nextRangeDimensions);					// position "range" right after keyframe
+							$prevRange.width( x - $prevRange.position().left );
+							$nextRange.css(nextRangeDimensions);					// position "range" right after keyframe
+						});
 					}
 				});
 			});
@@ -1881,7 +1890,7 @@ Game.onLoad = function(project, name, options) {
 			else _resetSelection();
 		} else _clearHover();
 	};
-	
+
 	// allow moving of objects/canvas when commandKey is held
 	paper.view.onMouseDrag = function onCanvasMouseDrag(event) {
 		if(event.event.button === 0)
