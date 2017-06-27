@@ -166,24 +166,26 @@ function _asGroup(config) {
 		type: 'group'
 	};
 }
+/* transform linear scale to logarithmic scale (used in animation panel's zoom) */
 function _linearTolog(factor, min, max) {
   min = Math.log(min);
   max = Math.log(max);
   return Math.exp(min + (max-min) * factor);
 }
-
+/* returns number of decimal places of a floating number */
 function _decimalPlaces(num) {
   var match = (''+num).match(/(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
   if (!match) { return 0; }
   return Math.max( 0, (match[1] ? match[1].length : 0) - (match[2] ? +match[2] : 0));
 }
-
+/* same as http://php.net/manual/en/function.basename.php */
 function _basename(str) {
    var base = new String(str).substring(_.lastIndexOf(str, '/') + 1); 
     if(_.lastIndexOf(base, '.') != -1)       
         base = base.substring(0, _.lastIndexOf(base, '.'));
    return base;
 }
+/* gets directory of given path */
 function _basepath(str) {
 	return str.substring(0, _.lastIndexOf(str, '/') + 1);
 }
@@ -200,6 +202,7 @@ function _deepOmit(obj, keysToOmit) {
   } 
   return omitFromObject(obj); // return the inner function result
 }
+/* helper to retrieve first element of ES6 Sets */
 function _firstFromSet(set) {
 	return set.values().next().value;
 }
@@ -265,7 +268,7 @@ function resetLoading(label, element) {
 	}
 }
 
-/* override animate method to add animations to animation stack for keyframes panel */
+/* override animate method to add animations to animation stack for animations panel */
 Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, options) {
 
 	/* experiment: get line number of Danimator invocation to replace inline
@@ -273,9 +276,9 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 	console.log('stack', _scriptInfo.stack, _scriptInfo.stack.match(/^\s*at\s+([^\s]+)\:(\d+)\:(\d+)/m), _scriptInfo.stack.split("\n"));
 	*/
 
-	var ease 	  = (property === 'frame' ? null : 'cubicOut');
+	var ease 	  = (property === 'frame' ? null : 'cubicOut');				// set default easing
 	var startTime = (options && options.delay) || 0;
-	var caller 	  = _normalizeCaller(danimatorAnimate.caller.caller.name);
+	var caller 	  = _normalizeCaller(danimatorAnimate.caller.caller.name);	// who triggered this animation? 
 
 	var track = tracks[item.id] || {
 			item: 		item,
@@ -283,8 +286,8 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 			startTime: 	(new Date).getTime() - Danimator.startTime,
 		};
 
-	var propertyTrack 	= _.get(track.properties, property, []);
-	var options 		= _.defaults(options, { delay: 0, easing: ease });
+	var propertyTrack 	= _.get(track.properties, property, []);			// retrieve existing track or create one
+	var options 		= _.defaults(options, { delay: 0, easing: ease });	// overwrite defaults with passed options
 
 	if(!item.data._animationsStart)
 		item.data._animationsStart = _getStartTime({options: options, duration: duration});
@@ -294,6 +297,7 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 		_.set(item, property, fr);
 	}
 
+	// create "keyframe"
 	var key = {
 		from: 		fr,
 		to: 		to,
@@ -305,11 +309,12 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 		id: 		propertyTrack.length
 	};
 
-	var duplicate = _.find(propertyTrack, {options: { delay: options.delay }});
 	// make sure start of ani isn't existing already
+	var duplicate = _.find(propertyTrack, {options: { delay: options.delay }});
 	if(duplicate) {
 		_.pull(propertyTrack, duplicate);
 	}
+
 	propertyTrack.push(key);
 
 	/* calc max duration on track-level */
@@ -320,6 +325,7 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 	track.properties[property] = propertyTrack;
 	tracks[item.id] = track;
 
+	// ensure createTracks is only called a max of every second
 	_.debounce(_createTracks, 1000)();
 
 	/* return handles for easier chaining of animations */
@@ -361,6 +367,7 @@ Danimator.onMorph = function() {
 	_createLayers(Danimator.layers, _PANELS.layers.$element.find('ul').empty());
 }
 
+/* send unsaved data to node server (see /server/…) */
 Danimator.save = function danimatorSave(data, filename) {
 	return $.ajax({
 		url: 	   		'http://localhost:8080/save',
@@ -374,9 +381,10 @@ Danimator.save = function danimatorSave(data, filename) {
 	});
 }
 
+/* we are in "interactive" mode when in editor */
 Danimator.interactive = true;
 
-/* panel events */
+/* events, events, events! */
 jQuery(function($){
 
 	var downPoint;
@@ -505,7 +513,7 @@ jQuery(function($){
 		.on('dblclick', 'time', function(event) {
 			$(this).text(0).trigger('blur');
 		})
-		/* keyframes panel zoom slider */
+		/* animations panel zoom slider */
 		.on('input', '.zoom', function(event) {
 			var zoom = Danimator.limit($(this).val(), 1, 100)/100;
 			var minZoom = 5;
@@ -972,11 +980,11 @@ function _createLayers(layers, $layers) {
 	});
 }
 
-/* UI helpers for keyframes panel */
+/* UI helpers for animations panel */
 function _getStartTime(track) 	{ return _.get(track ,'options.delay', 0);		}
 function _getEndTime(track) 	{ return _getStartTime(track) + _.get(track, 'duration', 0); }
 
-/* colorisation & gradient styles for timeline tracks in keyframes panel */
+/* colorisation & gradient styles for timeline tracks in animations panel */
 function _getStartStyle(property, tracks, key, type) {
 	var propertyConfig = _.get(ANIMATABLE_PROPERTIES[type], property.replace(/(\.\d+)?\.([^\.]+)$/, '.content.$2'));
 
@@ -1042,7 +1050,7 @@ function _getEndStyle(property, track, type) {
 	}
 }
 
-/* create timeline tracks (UI) for keyframes panel */
+/* create timeline tracks (UI) for animations panel */
 function _createTracks() {
 	var $tracks = _PANELS.animations.$element.find('ul.main').empty();
 
@@ -1508,6 +1516,7 @@ Game.onLoad = function(project, name, options) {
 			else _resetSelection();
 		} else _clearHover();
 	};
+	
 	// allow moving of objects/canvas when commandKey is held
 	paper.view.onMouseDrag = function onCanvasMouseDrag(event) {
 		if(event.event.button === 0)

@@ -1,9 +1,11 @@
+/* basic CSS reset */
 html, body {
   margin: 0;
   overflow: hidden;
   width: 100%;
   height: 100%; }
 
+/* general loading state on body */
 .loading {
   cursor: wait; }
 
@@ -66,17 +68,15 @@ canvas[resize] {
   top: 20px; }
 
 #layers-panel {
-  top: 20px; }
-
-#audio-panel,
-#layers-panel {
+  top: 20px;
   left: 20px; }
 
 #audio-panel {
+  left: 20px;
   top: 400px;
   max-width: 300px; }
 
-/* panel style */
+/* general panel style */
 .panel {
   -moz-user-select: none;
   -webkit-user-select: none;
@@ -271,6 +271,12 @@ canvas[resize] {
       .panel li.audio.muted > label {
         opacity: .6;
         background-color: #000; }
+  .panel .description .animate-btn {
+    float: right;
+    margin-right: 5px; }
+  .panel .description output {
+    float: right;
+    margin-right: 10px; }
 
 .ready .panel {
   display: block;
@@ -343,14 +349,6 @@ canvas[resize] {
   .panel .timeline .track.scrubbing,
   .panel .timeline .track:active {
     cursor: ew-resize; }
-
-.panel .description .animate-btn {
-  float: right;
-  margin-right: 5px; }
-
-.panel .description output {
-  float: right;
-  margin-right: 10px; }
 
 .alertify-notifier {
   font-family: Roboto, Helvetica, Arial, sans-serif; }

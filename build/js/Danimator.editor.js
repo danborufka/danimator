@@ -531,24 +531,26 @@ function _asGroup(config) {
 		type: 'group'
 	};
 }
+/* transform linear scale to logarithmic scale (used in animation panel's zoom) */
 function _linearTolog(factor, min, max) {
   min = Math.log(min);
   max = Math.log(max);
   return Math.exp(min + (max-min) * factor);
 }
-
+/* returns number of decimal places of a floating number */
 function _decimalPlaces(num) {
   var match = (''+num).match(/(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
   if (!match) { return 0; }
   return Math.max( 0, (match[1] ? match[1].length : 0) - (match[2] ? +match[2] : 0));
 }
-
+/* same as http://php.net/manual/en/function.basename.php */
 function _basename(str) {
    var base = new String(str).substring(_.lastIndexOf(str, '/') + 1); 
     if(_.lastIndexOf(base, '.') != -1)       
         base = base.substring(0, _.lastIndexOf(base, '.'));
    return base;
 }
+/* gets directory of given path */
 function _basepath(str) {
 	return str.substring(0, _.lastIndexOf(str, '/') + 1);
 }
@@ -565,6 +567,7 @@ function _deepOmit(obj, keysToOmit) {
   } 
   return omitFromObject(obj); // return the inner function result
 }
+/* helper to retrieve first element of ES6 Sets */
 function _firstFromSet(set) {
 	return set.values().next().value;
 }
@@ -574,7 +577,7 @@ function _changesFile(filetype) {
 	_.set(currentGame.files[filetype], 'saved', false);
 }
 function _changesProp(prop, value) {
-	var $input = $('#properties-panel').find('input[data-prop="' + prop + '"]');
+	var $input = _PANELS.properties.$element.find('input[data-prop="' + prop + '"]');
 	if(typeof value === 'boolean') {
 		$input.prop('checked', value);
 	} else {
@@ -596,18 +599,13 @@ function _getAnimationName(item, property, type) {
 }
 /* internal helper to deselect all paperJS items and update panels accordingly */
 function _resetSelection() {
-	$('#layers-panel')
-		.find('.layer').removeClass('selected').end()
-		.find('ul.main').scrollTop(0);
-
 	selectedElements.unselect(currentGame.project);
 	_anchorViz.visible = false;
 
-	var emptyState = _.template(_.unescape($('#properties-panel-empty-item')[0].content.children[0].outerHTML));
-
-	$('#properties-panel')
+	_PANELS.layers.$element
+		.find('.layer').removeClass('selected').end()
 		.find('.type').text('').end()
-		.find('ul.main').html(emptyState({ checked: FLAGS.view.selection }));
+		.find('ul.main').scrollTop(0).html(_PANELS.properties.emptyState.template({ checked: FLAGS.view.selection }));
 }
 /* mapping all alerts to the console */
 function alert(message, mode) 	{
@@ -635,7 +633,7 @@ function resetLoading(label, element) {
 	}
 }
 
-/* override animate method to add animations to animation stack for keyframes panel */
+/* override animate method to add animations to animation stack for animations panel */
 Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, options) {
 
 	/* experiment: get line number of Danimator invocation to replace inline
@@ -643,9 +641,9 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 	console.log('stack', _scriptInfo.stack, _scriptInfo.stack.match(/^\s*at\s+([^\s]+)\:(\d+)\:(\d+)/m), _scriptInfo.stack.split("\n"));
 	*/
 
-	var ease 	  = (property === 'frame' ? null : 'cubicOut');
+	var ease 	  = (property === 'frame' ? null : 'cubicOut');				// set default easing
 	var startTime = (options && options.delay) || 0;
-	var caller 	  = _normalizeCaller(danimatorAnimate.caller.caller.name);
+	var caller 	  = _normalizeCaller(danimatorAnimate.caller.caller.name);	// who triggered this animation? 
 
 	var track = tracks[item.id] || {
 			item: 		item,
@@ -653,8 +651,8 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 			startTime: 	(new Date).getTime() - Danimator.startTime,
 		};
 
-	var propertyTrack 	= _.get(track.properties, property, []);
-	var options 		= _.defaults(options, { delay: 0, easing: ease });
+	var propertyTrack 	= _.get(track.properties, property, []);			// retrieve existing track or create one
+	var options 		= _.defaults(options, { delay: 0, easing: ease });	// overwrite defaults with passed options
 
 	if(!item.data._animationsStart)
 		item.data._animationsStart = _getStartTime({options: options, duration: duration});
@@ -664,6 +662,7 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 		_.set(item, property, fr);
 	}
 
+	// create "keyframe"
 	var key = {
 		from: 		fr,
 		to: 		to,
@@ -675,11 +674,12 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 		id: 		propertyTrack.length
 	};
 
-	var duplicate = _.find(propertyTrack, {options: { delay: options.delay }});
 	// make sure start of ani isn't existing already
+	var duplicate = _.find(propertyTrack, {options: { delay: options.delay }});
 	if(duplicate) {
 		_.pull(propertyTrack, duplicate);
 	}
+
 	propertyTrack.push(key);
 
 	/* calc max duration on track-level */
@@ -690,6 +690,7 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 	track.properties[property] = propertyTrack;
 	tracks[item.id] = track;
 
+	// ensure createTracks is only called a max of every second
 	_.debounce(_createTracks, 1000)();
 
 	/* return handles for easier chaining of animations */
@@ -728,9 +729,10 @@ Danimator.onStep = function danimatorStep(animatable, value) {
 }
 /* update layers panel when morphing is triggered */
 Danimator.onMorph = function() {
-	_createLayers(Danimator.layers, $('#layers-panel ul').empty());
+	_createLayers(Danimator.layers, _PANELS.layers.$element.find('ul').empty());
 }
 
+/* send unsaved data to node server (see /server/…) */
 Danimator.save = function danimatorSave(data, filename) {
 	return $.ajax({
 		url: 	   		'http://localhost:8080/save',
@@ -744,9 +746,10 @@ Danimator.save = function danimatorSave(data, filename) {
 	});
 }
 
+/* we are in "interactive" mode when in editor */
 Danimator.interactive = true;
 
-/* panel events */
+/* events, events, events! */
 jQuery(function($){
 
 	var downPoint;
@@ -755,9 +758,6 @@ jQuery(function($){
 	var playInterval;
 	var lastOffset;
 	var lastTime = 0;
-
-	var $keyframesPanel = $('#animations-panel');
-	var $propertiesPanel = $('#properties-panel');
 
 		/* save all "reactive" DOM elements as local vars */
 	_.each(_PANELS, function(store, panel) {
@@ -768,9 +768,12 @@ jQuery(function($){
 		store.$element = $('#' + panel + '-panel');
 		return store;
 	});
+	_PANELS.properties.emptyState = { 
+		template: _.template(_.unescape(document.getElementById('properties-panel-empty-item').content.children[0].outerHTML)) 
+	};
 	
-	$time 			 = $('#animations-panel .description time');
-	$animationValue  = $('#animations-panel .description output');
+	$time 			 = _PANELS.animations.$element.find('.description time');
+	$animationValue  = _PANELS.animations.$element.find('.description output');
 
 	$(document)
 		/* layer-specific events */
@@ -796,7 +799,7 @@ jQuery(function($){
 			}
 
 			/* change all parent layer's selected state */
-			var $layers = $('#layers-panel ul.main');
+			var $layers = _PANELS.layers.$element.find('ul.main');
 			var $allParents = $layer.parentsUntil($layers).andSelf().filter('.layer').toggleClass('selected', selected);
 
 			$layers.scrollTop( $layer[0].offsetTop - ($layers.height() - $layer.height()) / 2 );
@@ -806,14 +809,14 @@ jQuery(function($){
 				$allParents.toggleClass('open', selected);
 			}
 
-			$keyframesPanel.toggleClass('hasSelection', selected);
+			_PANELS.animations.$element.toggleClass('hasSelection', selected);
 
 			if(selected) {
 				selectedElements.add( Danimator.sceneElement($layer) );
 
 				/* update title of property panel and trigger refresh */
-				$propertiesPanel.find('.type').text(' OF ' + event.item.className + ' ' + (event.item.name || ''));
-				_createProperties(ANIMATABLE_PROPERTIES[event.item.className], $propertiesPanel.find('ul.main').empty(), event.item);
+				_PANELS.properties.$element.find('.type').text(' OF ' + event.item.className + ' ' + (event.item.name || ''));
+				_createProperties(ANIMATABLE_PROPERTIES[event.item.className], _PANELS.properties.$element.find('ul.main').empty(), event.item);
 
 				/* move anchor helper into position and show */
 				_anchorViz.position = event.item.pivot || event.item.bounds.center;
@@ -875,7 +878,7 @@ jQuery(function($){
 		.on('dblclick', 'time', function(event) {
 			$(this).text(0).trigger('blur');
 		})
-		/* keyframes panel zoom slider */
+		/* animations panel zoom slider */
 		.on('input', '.zoom', function(event) {
 			var zoom = Danimator.limit($(this).val(), 1, 100)/100;
 			var minZoom = 5;
@@ -905,7 +908,7 @@ jQuery(function($){
 				event.type = 'mousemove';
 				$(this).trigger(event).addClass('scrubbing');
 				Danimator._activeSound && Danimator._activeSound.wave.play(Danimator.time, Danimator.time + .08);
-				$keyframesPanel.removeClass('hasSelection');
+				_PANELS.animations.$element.removeClass('hasSelection');
 			}
 		})
 		/* time scrubbing */
@@ -939,7 +942,7 @@ jQuery(function($){
 			// trigger selection of corresponding layer
 			element.data.$layer.not('.selected').trigger( $.Event('selected', {item: element.item}) );
 			
-			var $input = $('#properties-panel').find('input[data-prop="' + prop + '"]');
+			var $input = _PANELS.properties.$element.find('input[data-prop="' + prop + '"]');
 			$input.parentsUntil('ul.main').filter('li').addClass('open');
 			$input.focus();
 
@@ -1180,12 +1183,12 @@ jQuery(function($){
 						break;
 					case 'o':
 						if(selectedElements.size) {
-							$('#properties-panel input[data-prop=opacity]').focus()[0].select();
+							_PANELS.properties.$element.find('input[data-prop=opacity]').focus()[0].select();
 						}
 						break;
 					case 'r':
 						if(selectedElements.size) {
-							$('#properties-panel input[data-prop=rotation]').focus()[0].select();
+							_PANELS.properties.$element.find('input[data-prop=rotation]').focus()[0].select();
 						}
 						break;
 					case 's':
@@ -1342,11 +1345,11 @@ function _createLayers(layers, $layers) {
 	});
 }
 
-/* UI helpers for keyframes panel */
+/* UI helpers for animations panel */
 function _getStartTime(track) 	{ return _.get(track ,'options.delay', 0);		}
 function _getEndTime(track) 	{ return _getStartTime(track) + _.get(track, 'duration', 0); }
 
-/* colorisation & gradient styles for timeline tracks in keyframes panel */
+/* colorisation & gradient styles for timeline tracks in animations panel */
 function _getStartStyle(property, tracks, key, type) {
 	var propertyConfig = _.get(ANIMATABLE_PROPERTIES[type], property.replace(/(\.\d+)?\.([^\.]+)$/, '.content.$2'));
 
@@ -1412,9 +1415,9 @@ function _getEndStyle(property, track, type) {
 	}
 }
 
-/* create timeline tracks (UI) for keyframes panel */
+/* create timeline tracks (UI) for animations panel */
 function _createTracks() {
-	var $tracks 	= $('#animations-panel ul.main').empty();
+	var $tracks = _PANELS.animations.$element.find('ul.main').empty();
 
 	_.each(tracks, function(track) {
 		if(track) {
@@ -1618,7 +1621,7 @@ function _createProperties(properties, $props, item, subitem, path) {
 
 /* create waves (UI) for audio panel */
 function _createAudio() { 
-	var $sounds 	= $('#audio-panel').find('ul.main').empty();
+	var $sounds 	= _PANELS.audio.$element.find('ul.main').empty();
 	var wave 		= false;
 
 	_.each(Danimator.sounds, function(sound, name) {
@@ -1717,7 +1720,7 @@ Game.onLoad = function(project, name, options) {
 	}	
 
 	Danimator.onTimeChanged = function danimatorTimeChanged(time) {
-		var $inputs = $('#properties-panel').find('li').removeClass('keyed');
+		var $inputs = _PANELS.properties.$element.find('li').removeClass('keyed');
 
 		/* update all scrubbes */
 		$('.timeline .scrubber').each(function(){
@@ -1878,6 +1881,7 @@ Game.onLoad = function(project, name, options) {
 			else _resetSelection();
 		} else _clearHover();
 	};
+	
 	// allow moving of objects/canvas when commandKey is held
 	paper.view.onMouseDrag = function onCanvasMouseDrag(event) {
 		if(event.event.button === 0)
@@ -1982,9 +1986,9 @@ Game.onLoad = function(project, name, options) {
 
 	self.container.appendTop(_anchorViz);
 
-	_createLayers(layers, $('#layers-panel ul').empty());
+	_createLayers(layers, _PANELS.layers.$element.find('ul').empty());
 
-	if(!Danimator.sound) $('#audio-panel').hide();
+	if(!Danimator.sound) _PANELS.audio.$element.hide();
 
 	$('body').addClass('ready');
 

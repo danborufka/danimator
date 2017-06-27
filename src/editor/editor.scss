@@ -1,5 +1,4 @@
-$ami-snap-color: #349DC2;
-
+/* basic CSS reset */
 html,body { 
 	margin: 0;
     overflow: hidden;
@@ -7,6 +6,7 @@ html,body {
     height: 100%;
 }
 
+/* general loading state on body */
 .loading 				{
 							cursor: 				wait;
 }
@@ -76,19 +76,16 @@ canvas[resize] 			{
 
 /* initial panel positions */
 #properties-panel 		{	top: 					20px; 	}
-#layers-panel 			{	top: 					20px;	}
-
-#audio-panel,
-#layers-panel 			{
+#layers-panel 			{	top: 					20px;	
 							left: 					20px;
 }
-
 #audio-panel 			{
+							left: 					20px;
 							top: 					400px;
 							max-width: 				300px;
 }
 
-/* panel style */
+/* general panel style */
 .panel 					{
 							-moz-user-select: 		none;
 							-webkit-user-select: 	none;
@@ -371,6 +368,17 @@ canvas[resize] 			{
 			}
 		}
 	}
+
+	.description 		{
+		.animate-btn 	{
+							float: 					right;
+							margin-right: 			5px;
+		}
+		output 			{
+							float: 					right;
+							margin-right: 			10px;
+		}
+	}
 }
 
 .ready .panel 			{
@@ -465,17 +473,6 @@ canvas[resize] 			{
 	.track.scrubbing,
 	.track:active {
 		cursor: ew-resize;
-	}
-}
-
-.panel .description {
-	.animate-btn {
-		float: right;
-		margin-right: 5px;
-	}
-	output {
-		float: right;
-		margin-right: 10px;
 	}
 }
 
