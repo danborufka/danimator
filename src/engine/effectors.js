@@ -198,10 +198,13 @@ Danimator.Effector.Magnet.visualize = function danimatorMagnetEffectorVis(event)
 		style: 		self.styles.fill
 	});
 	radiusCtrl.onMouseDrag = function(event) {
-		_effectorDragging = true;
-		radiusCtrl.position = event.point;
-		self.radius = event.point.getDistance(self.position);
-		self.update(event);
+		// wrapping in requestAnimationFrame() to enhance performance (see http://37signals.com/talks/soundslice at 35:40)
+		requestAnimationFrame(function() {
+			_effectorDragging = true;
+			radiusCtrl.position = event.point;
+			self.radius = event.point.getDistance(self.position);
+			self.update(event);
+		});
 	}
 	radiusCtrl.onMouseUp = function() {
 		_effectorDragging = false;
@@ -218,11 +221,13 @@ Danimator.Effector.Magnet.visualize = function danimatorMagnetEffectorVis(event)
 		style: 		self.styles.outline
 	});
 	positionCtrl.onMouseDrag = function(event) {
-		_effectorDragging = true;
-		ctrls.position = event.point;
-		self.position = event.point;
-		self.icon && (self.icon.position = event.point);
-		self.update();
+		requestAnimationFrame(function() {
+			_effectorDragging = true;
+			ctrls.position = event.point;
+			self.position = event.point;
+			self.icon && (self.icon.position = event.point);
+			self.update();
+		});
 	}
 	positionCtrl.onMouseDown = function(event) {
 		self.magnitude = 1;
@@ -241,13 +246,15 @@ Danimator.Effector.Magnet.visualize = function danimatorMagnetEffectorVis(event)
 		style: 		self.styles.outline
 	});
 	fallfoffCtrl.onMouseDrag = function(event) {
-		fallfoffCtrl.position = paper.Point.max(event.point, self.position);
-		self.falloff = event.point.getDistance(self.position) / self.radius;
+		requestAnimationFrame(function() {
+			fallfoffCtrl.position = paper.Point.max(event.point, self.position);
+			self.falloff = event.point.getDistance(self.position) / self.radius;
 
-		_falloffDragging = true;
-		_effectorDragging = true;
+			_falloffDragging = true;
+			_effectorDragging = true;
 
-		self.update();
+			self.update();
+		});
 	}
 	fallfoffCtrl.onMouseUp = function() {
 		_falloffDragging = false;

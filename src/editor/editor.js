@@ -326,7 +326,7 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 	tracks[item.id] = track;
 
 	// ensure createTracks is only called a max of every second
-	_.debounce(_createTracks, 1000)();
+	_.debounce(_renderAnimationItems, 1000)();
 
 	/* return handles for easier chaining of animations */
 	return {
@@ -348,7 +348,7 @@ Danimator.load = function danimatorLoad(aniName) {
 				track.item = paper.project.getItem({id: id});
 			})
 			tracks = _.extend(tracks, json);
-			_createTracks();
+			_renderAnimationItems();
 			Danimator.time = Danimator.time;
 		} else {
 			console.warn('Animations "' + filename + '" couldn\'t be loaded :(');
@@ -364,7 +364,7 @@ Danimator.onStep = function danimatorStep(animatable, value) {
 }
 /* update layers panel when morphing is triggered */
 Danimator.onMorph = function() {
-	_createLayers(Danimator.layers, _PANELS.layers.$element.find('ul').empty());
+	_renderLayers(Danimator.layers, _PANELS.layers.$element.find('ul').empty());
 }
 
 /* send unsaved data to node server (see /server/…) */
@@ -451,7 +451,7 @@ jQuery(function($){
 
 				/* update title of property panel and trigger refresh */
 				_PANELS.properties.$element.find('.type').text(' OF ' + event.item.className + ' ' + (event.item.name || ''));
-				_createProperties(ANIMATABLE_PROPERTIES[event.item.className], _PANELS.properties.$element.find('ul.main').empty(), event.item);
+				_renderProperties(ANIMATABLE_PROPERTIES[event.item.className], _PANELS.properties.$element.find('ul.main').empty(), event.item);
 
 				/* move anchor helper into position and show */
 				_anchorViz.position = event.item.pivot || event.item.bounds.center;
@@ -525,7 +525,7 @@ jQuery(function($){
 				sound.wave.zoom(TIME_FACTOR);
 			});
 
-			_createTracks();
+			_renderAnimationItems();
 		})
 		/* reset zoom on dblclick */
 		.on('dblclick', '.zoom', function(event) {
@@ -598,7 +598,7 @@ jQuery(function($){
 				var value 	= _.get(item, prop);
 
 				Danimator(item, prop, value, value, duration, { delay: Danimator.time });
-				_createTracks();
+				_renderAnimationItems();
 			} else {
 				alert('You have to supply a floating number for duration!', 'error');
 			}
@@ -689,7 +689,7 @@ jQuery(function($){
 						}
 					});
 
-					_createTracks();
+					_renderAnimationItems();
 				}
 
 				$this.data('oldValue', value);
@@ -959,7 +959,7 @@ jQuery(function($){
 });
 
 /* create layers (UI) for layer panel */
-function _createLayers(layers, $layers) {
+function _renderLayers(layers, $layers) {
 	_.each(layers, function(layer, index) {
 		if(layer) {
 			var sceneElement = Danimator.sceneElement(layer);
@@ -973,13 +973,13 @@ function _createLayers(layers, $layers) {
 			sceneElement.data.$layer = $layer;
 
 			layer.data.onStateChanged = layer.data.onFrameChanged = function() {
-				_createLayers(layers, $layers.empty());
+				_renderLayers(layers, $layers.empty());
 			}
 
 			/* sublayer support */
 			if(layer.children && layer.children.length) {
 				var $sublayers = $('<ul>').appendTo($layer);
-				_createLayers(layer.children, $sublayers);
+				_renderLayers(layer.children, $sublayers);
 			}
 			$layers.append($layer);
 		}
@@ -1056,8 +1056,12 @@ function _getEndStyle(property, track, type) {
 	}
 }
 
+function _renderTrack() {
+
+}
+
 /* create timeline tracks (UI) for animations panel */
-function _createTracks() {
+function _renderAnimationItems() {
 	var $tracks = _PANELS.animations.$element.find('ul.main').empty();
 
 	_.each(tracks, function(track) {
@@ -1123,7 +1127,7 @@ function _createTracks() {
 						});
 
 						_frameDragging = false; 
-						_createTracks();
+						_renderAnimationItems();
 					},
 					drag: 	function(event, ui) { 
 						// wrapping in requestAnimationFrame() to enhance performance (see http://37signals.com/talks/soundslice at 35:40)
@@ -1167,7 +1171,7 @@ function _createTracks() {
 }
 
 /* create properties (UI) for properties panel */
-function _createProperties(properties, $props, item, subitem, path) {
+function _renderProperties(properties, $props, item, subitem, path) {
 	// make sure path ends in dot
 	path = path ? _.trim(path, '.') + '.' : '';
 
@@ -1256,7 +1260,7 @@ function _createProperties(properties, $props, item, subitem, path) {
 			/* same routine for subelements ("property groups") like e.g. x and y keys of position property */
 			if(config.type === 'group') {
 				var $subprops = $('<ul>').appendTo($prop);
-				_createProperties(config.content, $subprops, item, _.get(item, name), property);
+				_renderProperties(config.content, $subprops, item, _.get(item, name), property);
 			}
 			$props.append($prop);
 		}
@@ -1264,7 +1268,7 @@ function _createProperties(properties, $props, item, subitem, path) {
 }
 
 /* create waves (UI) for audio panel */
-function _createAudio() { 
+function _renderAudio() { 
 	var $sounds 	= _PANELS.audio.$element.find('ul.main').empty();
 	var wave 		= false;
 
@@ -1317,7 +1321,7 @@ function _createAudio() {
 	});
 }
 
-var _throttledCreateAudio = _.debounce(_createAudio, 100);
+var _throttledCreateAudio = _.debounce(_renderAudio, 100);
 
 Danimator.onSound = function danimatorOnSound(name, sound) {
 	_throttledCreateAudio.apply(this, arguments);
@@ -1630,7 +1634,7 @@ Game.onLoad = function(project, name, options) {
 
 	self.container.appendTop(_anchorViz);
 
-	_createLayers(layers, _PANELS.layers.$element.find('ul').empty());
+	_renderLayers(layers, _PANELS.layers.$element.find('ul').empty());
 
 	if(!Danimator.sound) _PANELS.audio.$element.hide();
 
