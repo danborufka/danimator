@@ -209,7 +209,7 @@ function _changesFile(filetype) {
 	_.set(currentGame.files[filetype], 'saved', false);
 }
 function _changesProp(prop, value) {
-	var $input = $('#properties-panel').find('input[data-prop="' + prop + '"]');
+	var $input = _PANELS.properties.$element.find('input[data-prop="' + prop + '"]');
 	if(typeof value === 'boolean') {
 		$input.prop('checked', value);
 	} else {
@@ -231,18 +231,13 @@ function _getAnimationName(item, property, type) {
 }
 /* internal helper to deselect all paperJS items and update panels accordingly */
 function _resetSelection() {
-	$('#layers-panel')
-		.find('.layer').removeClass('selected').end()
-		.find('ul.main').scrollTop(0);
-
 	selectedElements.unselect(currentGame.project);
 	_anchorViz.visible = false;
 
-	var emptyState = _.template(_.unescape($('#properties-panel-empty-item')[0].content.children[0].outerHTML));
-
-	$('#properties-panel')
+	_PANELS.layers.$element
+		.find('.layer').removeClass('selected').end()
 		.find('.type').text('').end()
-		.find('ul.main').html(emptyState({ checked: FLAGS.view.selection }));
+		.find('ul.main').scrollTop(0).html(_PANELS.properties.emptyState.template({ checked: FLAGS.view.selection }));
 }
 /* mapping all alerts to the console */
 function alert(message, mode) 	{
@@ -363,7 +358,7 @@ Danimator.onStep = function danimatorStep(animatable, value) {
 }
 /* update layers panel when morphing is triggered */
 Danimator.onMorph = function() {
-	_createLayers(Danimator.layers, $('#layers-panel ul').empty());
+	_createLayers(Danimator.layers, _PANELS.layers.$element.find('ul').empty());
 }
 
 Danimator.save = function danimatorSave(data, filename) {
@@ -391,9 +386,6 @@ jQuery(function($){
 	var lastOffset;
 	var lastTime = 0;
 
-	var $keyframesPanel = $('#animations-panel');
-	var $propertiesPanel = $('#properties-panel');
-
 		/* save all "reactive" DOM elements as local vars */
 	_.each(_PANELS, function(store, panel) {
 		// create templating function from template#*-panel-item
@@ -403,9 +395,12 @@ jQuery(function($){
 		store.$element = $('#' + panel + '-panel');
 		return store;
 	});
+	_PANELS.properties.emptyState = { 
+		template: _.template(_.unescape(document.getElementById('properties-panel-empty-item').content.children[0].outerHTML)) 
+	};
 	
-	$time 			 = $('#animations-panel .description time');
-	$animationValue  = $('#animations-panel .description output');
+	$time 			 = _PANELS.animations.$element.find('.description time');
+	$animationValue  = _PANELS.animations.$element.find('.description output');
 
 	$(document)
 		/* layer-specific events */
@@ -431,7 +426,7 @@ jQuery(function($){
 			}
 
 			/* change all parent layer's selected state */
-			var $layers = $('#layers-panel ul.main');
+			var $layers = _PANELS.layers.$element.find('ul.main');
 			var $allParents = $layer.parentsUntil($layers).andSelf().filter('.layer').toggleClass('selected', selected);
 
 			$layers.scrollTop( $layer[0].offsetTop - ($layers.height() - $layer.height()) / 2 );
@@ -441,14 +436,14 @@ jQuery(function($){
 				$allParents.toggleClass('open', selected);
 			}
 
-			$keyframesPanel.toggleClass('hasSelection', selected);
+			_PANELS.animations.$element.toggleClass('hasSelection', selected);
 
 			if(selected) {
 				selectedElements.add( Danimator.sceneElement($layer) );
 
 				/* update title of property panel and trigger refresh */
-				$propertiesPanel.find('.type').text(' OF ' + event.item.className + ' ' + (event.item.name || ''));
-				_createProperties(ANIMATABLE_PROPERTIES[event.item.className], $propertiesPanel.find('ul.main').empty(), event.item);
+				_PANELS.properties.$element.find('.type').text(' OF ' + event.item.className + ' ' + (event.item.name || ''));
+				_createProperties(ANIMATABLE_PROPERTIES[event.item.className], _PANELS.properties.$element.find('ul.main').empty(), event.item);
 
 				/* move anchor helper into position and show */
 				_anchorViz.position = event.item.pivot || event.item.bounds.center;
@@ -540,7 +535,7 @@ jQuery(function($){
 				event.type = 'mousemove';
 				$(this).trigger(event).addClass('scrubbing');
 				Danimator._activeSound && Danimator._activeSound.wave.play(Danimator.time, Danimator.time + .08);
-				$keyframesPanel.removeClass('hasSelection');
+				_PANELS.animations.$element.removeClass('hasSelection');
 			}
 		})
 		/* time scrubbing */
@@ -574,7 +569,7 @@ jQuery(function($){
 			// trigger selection of corresponding layer
 			element.data.$layer.not('.selected').trigger( $.Event('selected', {item: element.item}) );
 			
-			var $input = $('#properties-panel').find('input[data-prop="' + prop + '"]');
+			var $input = _PANELS.properties.$element.find('input[data-prop="' + prop + '"]');
 			$input.parentsUntil('ul.main').filter('li').addClass('open');
 			$input.focus();
 
@@ -815,12 +810,12 @@ jQuery(function($){
 						break;
 					case 'o':
 						if(selectedElements.size) {
-							$('#properties-panel input[data-prop=opacity]').focus()[0].select();
+							_PANELS.properties.$element.find('input[data-prop=opacity]').focus()[0].select();
 						}
 						break;
 					case 'r':
 						if(selectedElements.size) {
-							$('#properties-panel input[data-prop=rotation]').focus()[0].select();
+							_PANELS.properties.$element.find('input[data-prop=rotation]').focus()[0].select();
 						}
 						break;
 					case 's':
@@ -1049,7 +1044,7 @@ function _getEndStyle(property, track, type) {
 
 /* create timeline tracks (UI) for keyframes panel */
 function _createTracks() {
-	var $tracks 	= $('#animations-panel ul.main').empty();
+	var $tracks = _PANELS.animations.$element.find('ul.main').empty();
 
 	_.each(tracks, function(track) {
 		if(track) {
@@ -1253,7 +1248,7 @@ function _createProperties(properties, $props, item, subitem, path) {
 
 /* create waves (UI) for audio panel */
 function _createAudio() { 
-	var $sounds 	= $('#audio-panel').find('ul.main').empty();
+	var $sounds 	= _PANELS.audio.$element.find('ul.main').empty();
 	var wave 		= false;
 
 	_.each(Danimator.sounds, function(sound, name) {
@@ -1352,7 +1347,7 @@ Game.onLoad = function(project, name, options) {
 	}	
 
 	Danimator.onTimeChanged = function danimatorTimeChanged(time) {
-		var $inputs = $('#properties-panel').find('li').removeClass('keyed');
+		var $inputs = _PANELS.properties.$element.find('li').removeClass('keyed');
 
 		/* update all scrubbes */
 		$('.timeline .scrubber').each(function(){
@@ -1617,9 +1612,9 @@ Game.onLoad = function(project, name, options) {
 
 	self.container.appendTop(_anchorViz);
 
-	_createLayers(layers, $('#layers-panel ul').empty());
+	_createLayers(layers, _PANELS.layers.$element.find('ul').empty());
 
-	if(!Danimator.sound) $('#audio-panel').hide();
+	if(!Danimator.sound) _PANELS.audio.$element.hide();
 
 	$('body').addClass('ready');
 
