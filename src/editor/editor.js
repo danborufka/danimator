@@ -192,15 +192,15 @@ function _basepath(str) {
 function _deepOmit(obj, keysToOmit) {
   var keysToOmitIndex =  _.keyBy(Array.isArray(keysToOmit) ? keysToOmit : [keysToOmit]); // create an index object of the keys that should be omitted
 
-  function omitFromObject(obj) { // the inner function which will be called recursivley
+  function _omitFromObject(obj) { // the inner function which will be called recursivley
     return _.transform(obj, function(result, value, key) { // transform to a new object
       if (key in keysToOmitIndex) { // if the key is in the index skip it
         return;
       }
-      result[key] = _.isObject(value) ? omitFromObject(value) : value; // if the key is an object run it through the inner function - omitFromObject
+      result[key] = _.isObject(value) ? _omitFromObject(value) : value; // if the key is an object run it through the inner function - _omitFromObject
     })
   } 
-  return omitFromObject(obj); // return the inner function result
+  return _omitFromObject(obj); // return the inner function result
 }
 /* helper to retrieve first element of ES6 Sets */
 function _firstFromSet(set) {
