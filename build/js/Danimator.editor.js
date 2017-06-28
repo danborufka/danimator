@@ -1299,11 +1299,11 @@ jQuery(function($){
 
 	/* temporarily save all "reactive" DOM elements */
 	layerTemplate 	 = $('template#layers-panel-item')[0].content.children[0].outerHTML;
-	keyItemTemplate  = $('template#animations-panel-item')[0].content.children[0].outerHTML;
+	keyItemTemplate  = $('template#keyframe-panel-item')[0].content.children[0].outerHTML;
 	propItemTemplate = $('template#properties-panel-item')[0].content.children[0].outerHTML;
 	audioTemplate 	 = $('template#audio-panel-item')[0].content.children[0].outerHTML;
-	$time 			 = $('#animations-panel .description time');
-	$animationValue  = $('#animations-panel .description output');
+	$time 			 = $('#keyframes .description time');
+	$animationValue  = $('#keyframes .description output');
 });
 
 /* create layers (UI) for layer panel */
