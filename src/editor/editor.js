@@ -207,6 +207,12 @@ function _firstFromSet(set) {
 	return set.values().next().value;
 }
 
+/*  */
+function _normalizeTrigger(trigger) {
+	if(trigger === 'root') return '';
+	return trigger;
+}
+
 /* file saving helpers*/
 function _changesFile(filetype) {
 	_.set(currentGame.files[filetype], 'saved', false);
@@ -396,15 +402,19 @@ jQuery(function($){
 
 		/* save all "reactive" DOM elements as local vars */
 	_.each(_PANELS, function(store, panel) {
-		// create templating function from template#*-panel-item
-		var _tmpl = document.getElementById(panel + '-panel-item').content.children[0].outerHTML;
-
+		// create templating function from templates #*-panel-item
+		var _tmpl = $('#' + panel + '-panel-item').html();
 		store.template = _.template(_.unescape( _tmpl ));
 		store.$element = $('#' + panel + '-panel');
 		return store;
 	});
+	_PANELS.animations.$list = _PANELS.animations.$element.find('ul.main');
+
+	_PANELS.animations.timeline = {
+		template: _.template(_.unescape($('#animations-panel-item-timeline').html()))
+	};
 	_PANELS.properties.emptyState = { 
-		template: _.template(_.unescape(document.getElementById('properties-panel-empty-item').content.children[0].outerHTML)) 
+		template: _.template(_.unescape($('#properties-panel-empty-item').html())) 
 	};
 	
 	$time 			 = _PANELS.animations.$element.find('.description time');
@@ -1056,118 +1066,145 @@ function _getEndStyle(property, track, type) {
 	}
 }
 
-function _renderTrack() {
-
-}
-
 /* create timeline tracks (UI) for animations panel */
 function _renderAnimationItems() {
-	var $tracks = _PANELS.animations.$element.find('ul.main').empty();
+	// if the list is waiting for input empty it out before proceeding
+	_PANELS.animations.$list.filter('.waiting').empty();
+	_.each(tracks, _renderAnimationItem);
+}
+function _renderAnimationItem(track) {
+	if(track) {
+		var properties = _.mapValues(track.properties, _.partial(_.sortBy, _, 'options.delay'));
+		var sceneElement = Danimator.sceneElement(track.item);
+		var $item = $('#animations-panel-item-' + track.item.id);
 
-	_.each(tracks, function(track) {
-		if(track) {
-			var properties = _.mapValues(track.properties, _.partial(_.sortBy, _, 'options.delay'));
-			var sceneElement = Danimator.sceneElement(track.item);
+		// render template into String
+		var $track = $(_PANELS.animations.template({
+				Danimator: 			Danimator,
+				TIME_FACTOR: 		TIME_FACTOR,
+				properties: 		properties,
+				track: 				track,
+			})).data({ track: track, sceneElement: sceneElement, element: $track });
 
-			var $keys = $(_PANELS.animations.template({
-					Danimator: 		Danimator,
-					maxDuration: 	_.round(track.maxDuration, 2),
-					name: 			track.item.name,
-					type: 			track.item.className,
-					properties: 	properties,
-					TIME_FACTOR: 	TIME_FACTOR,
-					getTrigger: 	function(range) { 
-						switch(range.caller) {
-							case '':
-							case 'root':
-								return '';
-						}
-						return ' triggered';
-					}
-				})).data({ track: track, sceneElement: sceneElement, element: $keys });
+		if($item.length) {
+			console.log('replacing parent!', track.item.id);
+			// replace existing DOM element if found
+			$item.replaceWith($track);									
+		} else {
+			// otherwise inject into DOM!
+			_PANELS.animations.$list.append($track);					
+		}
 
-			sceneElement.data.$keys = $keys;
+		var $frames = _PANELS.animations.$list.find('.keyframe');	// select keyframes
+
+		// add all full seconds to the snapping steps of keyframes
+		_snapKeyframes.list = _.range(Danimator.maxDuration);
+
+		$frames.each(function() {
+			var $this = $(this);
+			var _y = $this.top() - 7;
 			
-			var $frames = $tracks.append($keys).find('.keyframe');
+			var newTime;
+			var currentTrack;
 
-			// add all full seconds to the snapping steps of keyframes
-			_snapKeyframes.list = _.range(Danimator.maxDuration);
+			var keyTime    = $this.data('time');
+			var $lastRange = $this.prev('.range');
+			var $nextRange = $this.next('.range');
 
-			$frames.each(function() {
-				var $this = $(this);
-				var _y = $this.top() - 7;
-				
-				var newTime;
-				var currentTrack;
+			// add keyframe's time to snapping steps 
+			_snapKeyframes.add( keyTime );
 
-				var keyTime    = $this.data('time');
-				var $lastRange = $this.prev('.range');
-				var $nextRange = $this.next('.range');
+			$this.draggable({ 
+				containment: [ $lastRange.left() + 1, _y, $nextRange.right() - 1, _y],
+				cursor: 'pointer',
+				start: 	function() { _frameDragging = true; },
+				stop: 	function(event, ui) { 
 
-				// add keyframe's time to snapping steps 
-				_snapKeyframes.add( keyTime );
+					_.each(currentTrack, function(track, index) {
+						// if startTime corresponds original time of currently dragged key
+						if(_getStartTime(track) === keyTime) {
+							// adapt startTime
+							track.options.delay = newTime;
+							track.duration = _getEndTime(track) - newTime;
 
-				$this.draggable({ 
-					containment: [ $lastRange.left() + 1, _y, $nextRange.right() - 1, _y],
-					cursor: 'pointer',
-					start: 	function() { _frameDragging = true; },
-					stop: 	function(event, ui) { 
+						} else if(_getEndTime(track) === keyTime) {
+							// adapt endTime
+							track.duration = newTime - _getStartTime(track);
+						}
+					});
 
-						_.each(currentTrack, function(track, index) {
-							// if startTime corresponds original time of currently dragged key
-							if(_getStartTime(track) === keyTime) {
-								// adapt startTime
-								track.options.delay = newTime;
-								track.duration = _getEndTime(track) - newTime;
+					_frameDragging = false; 
+					_renderAnimationItems();
+				},
+				drag: 	function(event, ui) { 
+					// wrapping in requestAnimationFrame() to enhance performance (see http://37signals.com/talks/soundslice at 35:40)
+					requestAnimationFrame(function() {
+						_frameDragging = true;
 
-							} else if(_getEndTime(track) === keyTime) {
-								// adapt endTime
-								track.duration = newTime - _getStartTime(track);
-							}
-						});
+						var x 			= ui.position.left - 1;
+						var index 	 	= $this.closest('.track').find('.keyframe').index($this);
+						var property 	= $this.closest('li.timeline').data('property');
 
-						_frameDragging = false; 
-						_renderAnimationItems();
-					},
-					drag: 	function(event, ui) { 
-						// wrapping in requestAnimationFrame() to enhance performance (see http://37signals.com/talks/soundslice at 35:40)
-						requestAnimationFrame(function() {
-							_frameDragging = true;
+						currentTrack 	= $this.closest('li.item').data('track').properties[property];
+						newTime 		= x / TIME_FACTOR;
 
-							var x 			= ui.position.left - 1;
-							var index 	 	= $this.closest('.track').find('.keyframe').index($this);
-							var property 	= $this.closest('li.timeline').data('property');
+						/* snap to snapping points onShiftHold */
+						if(event.shiftKey) {
+							newTime = _snapKeyframes.snap(newTime);
+							x = newTime * TIME_FACTOR;
+							ui.position.left = x + 1;
+						}
 
-							currentTrack 	= $this.closest('li.item').data('track').properties[property];
-							newTime 		= x / TIME_FACTOR;
+						Danimator.time = newTime;
 
-							/* snap to snapping points onShiftHold */
-							if(event.shiftKey) {
-								newTime = _snapKeyframes.snap(newTime);
-								x = newTime * TIME_FACTOR;
-								ui.position.left = x + 1;
-							}
+						var $nextRange 		= $this.next('.range');
+						var $prevRange 		= $this.prev('.range');
+						var $nextKeyframe	= $this.next().next('.keyframe');
 
-							Danimator.time = newTime;
+						var nextRangeDimensions = { left: x };
 
-							var $nextRange 		= $this.next('.range');
-							var $prevRange 		= $this.prev('.range');
-							var $nextKeyframe	= $this.next().next('.keyframe');
+						if($nextKeyframe.length) {
+							nextRangeDimensions.width = ($nextKeyframe.data('time') - newTime) * TIME_FACTOR;
+						}
 
-							var nextRangeDimensions = { left: x };
-
-							if($nextKeyframe.length) {
-								nextRangeDimensions.width = ($nextKeyframe.data('time') - newTime) * TIME_FACTOR;
-							}
-
-							$prevRange.width( x - $prevRange.position().left );
-							$nextRange.css(nextRangeDimensions);					// position "range" right after keyframe
-						});
-					}
-				});
+						$prevRange.width( x - $prevRange.position().left );
+						$nextRange.css(nextRangeDimensions);					// position "range" right after keyframe
+					});
+				}
 			});
+		});
+	}
+}
+
+function _getTimeline(ranges, property, track) {
+	return _PANELS.animations.timeline.template({
+		Danimator: 		Danimator,
+		TIME_FACTOR: 	TIME_FACTOR,
+		property: 		property,
+		ranges: 		ranges,
+		slug: 			slug,
+		track: 			track,
+		getTrigger: 	function(range) { 
+			if(_normalizeTrigger(range.caller).length) {
+				return ' triggered';
+			}
 		}
 	});
+}
+
+function _renderTimeline(ranges, property, track) {
+	var $list = $('#animations-panel-item-' + track.item.id + ' ul');
+	var $item = $('#animations-panel-item-' + track.item.id + '-' + slug(property));
+	var timeline = _getTimeline(ranges, property, track);
+
+	if($item.length) {
+		console.log('replacing parent!', track.item.id);
+		// replace existing DOM element if found
+		$item.replaceWith(timeline);									
+	} else {
+		// otherwise inject into DOM!
+		$list.append(timeline);
+	}
 }
 
 /* create properties (UI) for properties panel */
