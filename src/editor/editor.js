@@ -1,6 +1,6 @@
 /* animation editor engine */
 // TODOS:
-// o check layers vs. groups (reimport from Illu)
+// ø only rerender changed timelines instead of all
 
 var currentGame;
 var tracks   		= {};
@@ -332,7 +332,9 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 	tracks[item.id] = track;
 
 	// ensure createTracks is only called a max of every second
-	_.debounce(_renderAnimationItems, 1000)();
+	// _.debounce(_renderAnimationItems, 1000)();
+	// ...
+	_renderTimeline(propertyTrack, property, track);
 
 	/* return handles for easier chaining of animations */
 	return {
@@ -1196,6 +1198,11 @@ function _renderTimeline(ranges, property, track) {
 	var $list = $('#animations-panel-item-' + track.item.id + ' ul');
 	var $item = $('#animations-panel-item-' + track.item.id + '-' + slug(property));
 	var timeline = _getTimeline(ranges, property, track);
+
+	// if there's no parent yet -> create it!
+	if(!$list.length) {
+		_renderAnimationItem(track);
+	}
 
 	if($item.length) {
 		console.log('replacing parent!', track.item.id);
