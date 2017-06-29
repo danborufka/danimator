@@ -114,10 +114,10 @@ canvas[resize] 			{
 		}
 	}
 
-	&.ui-draggable-dragging 
-						{
-							z-index: 				1000;
-	}
+	// &.ui-draggable-dragging 
+	// 					{
+	// 						z-index: 				1000;
+	// }
 
 	&.ui-draggable-dragging > label,
 	&:active > label 	{
