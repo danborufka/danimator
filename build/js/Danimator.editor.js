@@ -68,6 +68,7 @@ jQuery('.panel').each(function() {
 	$panel
 		.draggable({ 
 			handle: 		'>label', 
+			stack: 			'.panel',
 			containment: 	[0, 0, $(window).width() - $panel.width(), $(window).height() - $panel.height()],
 			stop: 			function() {
 				localStorage.setItem('editor-panels-' + $panel[0].id + '-pos', JSON.stringify($panel.offset()));
@@ -367,7 +368,7 @@ jQuery(window).on('popstate', function(event, state) {
 });;
 /* animation editor engine */
 // TODOS:
-// o check layers vs. groups (reimport from Illu)
+// ø only rerender changed timelines instead of all
 
 var currentGame;
 var tracks   		= {};
@@ -610,9 +611,11 @@ function _resetSelection() {
 	selectedElements.unselect(currentGame.project);
 	_anchorViz.visible = false;
 
+	/* reset panel contents and scrolling */
 	_PANELS.layers.$element
 		.find('.layer').removeClass('selected').end()
-		.find('.type').text('').end()
+		.find('.type').text('').end();
+	_PANELS.properties.$element
 		.find('ul.main').scrollTop(0).html(_PANELS.properties.emptyState.template({ checked: FLAGS.view.selection }));
 }
 /* mapping all alerts to the console */
@@ -699,7 +702,8 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 	tracks[item.id] = track;
 
 	// ensure createTracks is only called a max of every second
-	_.debounce(_renderAnimationItems, 1000)();
+	console.log('property1', property, track);
+	_renderTimeline(property, track);
 
 	/* return handles for easier chaining of animations */
 	return {
@@ -720,8 +724,8 @@ Danimator.load = function danimatorLoad(aniName) {
 				if(!isNaN(Number(id))) id = Number(id);
 				track.item = paper.project.getItem({id: id});
 			})
-			tracks = _.extend(tracks, json);
-			_renderAnimationItems();
+			_.extend(tracks, json);
+			_renderAnimations(tracks);
 			Danimator.time = Danimator.time;
 		} else {
 			console.warn('Animations "' + filename + '" couldn\'t be loaded :(');
@@ -749,7 +753,7 @@ Danimator.save = function danimatorSave(data, filename) {
 		dataType: 	 	'json',
 		data: 			JSON.stringify({ file: filename, content: JSON.stringify(data) }),
 		success: 		function(response) {
-							console.log('we are back with', response);
+							console.warn('we are back with', response);
 						}
 	});
 }
@@ -767,16 +771,17 @@ jQuery(function($){
 	var lastOffset;
 	var lastTime = 0;
 
-		/* save all "reactive" DOM elements as local vars */
+	/* store all "reactive" DOM elements as local vars */
 	_.each(_PANELS, function(store, panel) {
 		// create templating function from templates #*-panel-item
 		var _tmpl = $('#' + panel + '-panel-item').html();
 		store.template = _.template(_.unescape( _tmpl ));
 		store.$element = $('#' + panel + '-panel');
+		store.$list = store.$element.find('ul.main');
 		return store;
 	});
-	_PANELS.animations.$list = _PANELS.animations.$element.find('ul.main');
 
+	/* additionally store all special "reactive" DOM elements */
 	_PANELS.animations.timeline = {
 		template: _.template(_.unescape($('#animations-panel-item-timeline').html()))
 	};
@@ -879,12 +884,15 @@ jQuery(function($){
 		.on('blur', 'time', function(event) {
 			var $this = $(this);
 			var value = Number($this.text().replace(/[^\d\.\,]*/g, ''));
+			var unit = $this.text().match(/[^\d]+/g)[0];
+
 			if(isNaN(value)) {
 				value = Danimator.time;
 			} else {
-				Danimator.time = value;
+				Danimator.time = value / (unit === 'ms' ? 1000 : 1);
 			}
-			$this.text(value + 's');
+
+			$this.text(value + unit);
 		})
 		/* reset time on dblclick */
 		.on('dblclick', 'time', function(event) {
@@ -902,7 +910,7 @@ jQuery(function($){
 				sound.wave.zoom(TIME_FACTOR);
 			});
 
-			_renderAnimationItems();
+			_renderAnimations(tracks);
 		})
 		/* reset zoom on dblclick */
 		.on('dblclick', '.zoom', function(event) {
@@ -975,7 +983,7 @@ jQuery(function($){
 				var value 	= _.get(item, prop);
 
 				Danimator(item, prop, value, value, duration, { delay: Danimator.time });
-				_renderAnimationItems();
+				_renderAnimations(tracks);
 			} else {
 				alert('You have to supply a floating number for duration!', 'error');
 			}
@@ -1066,7 +1074,7 @@ jQuery(function($){
 						}
 					});
 
-					_renderAnimationItems();
+					_renderAnimations(tracks);
 				}
 
 				$this.data('oldValue', value);
@@ -1223,11 +1231,11 @@ jQuery(function($){
 				switch(event.key) {
 					/* prevFrame */
 					case ',':
-						Danimator.time = Danimator.limit(Danimator.time - 1/12, 0, Danimator.maxDuration);
+						Danimator.time = Danimator.limit(Danimator.time - 1/1000, 0, Danimator.maxDuration);
 						return false;
 					/* nextFrame */
 					case '.':
-						Danimator.time = Danimator.limit(Danimator.time + 1/12, 0, Danimator.maxDuration);
+						Danimator.time = Danimator.limit(Danimator.time + 1/1000, 0, Danimator.maxDuration);
 						return false;
 					/* prevFrame * 10 */
 					case ';':
@@ -1295,7 +1303,7 @@ jQuery(function($){
 			var data = new FormData();
 
 			_.each(event.originalEvent.dataTransfer.items, function(item){
-				console.log('item', item);
+				console.warn('item', item);
 			});
 
 	        _.each(event.originalEvent.dataTransfer.files, function(file, i) {
@@ -1308,10 +1316,10 @@ jQuery(function($){
 
 	        		switch(type[1]) {
 		        		case 'javascript':
-	        				console.log('script(s) on board.', extension, file);
+	        				console.warn('script(s) on board.', extension, file);
 		        			break;
 		        		case 'svg+xml':
-		        			console.log('vector on board.');
+		        			console.warn('vector on board.');
 		        			break;
 		        		default:
 		        			console.error('not found!');
@@ -1334,6 +1342,8 @@ jQuery(function($){
 			$('#dummy').removeClass('dropping'); 	
 		});
 });
+
+/* === UI DOM UPDATERS FOR LAYERS PANEL === */
 
 /* create layers (UI) for layer panel */
 function _renderLayers(layers, $layers) {
@@ -1363,11 +1373,7 @@ function _renderLayers(layers, $layers) {
 	});
 }
 
-/* UI helpers for animations panel */
-function _getStartTime(track) 	{ return _.get(track ,'options.delay', 0);		}
-function _getEndTime(track) 	{ return _getStartTime(track) + _.get(track, 'duration', 0); }
-
-/* colorisation & gradient styles for timeline tracks in animations panel */
+/* colorisation & gradient styles for special timeline tracks in animations panel */
 function _getStartStyle(property, tracks, key, type) {
 	var propertyConfig = _.get(ANIMATABLE_PROPERTIES[type], property.replace(/(\.\d+)?\.([^\.]+)$/, '.content.$2'));
 
@@ -1433,17 +1439,27 @@ function _getEndStyle(property, track, type) {
 	}
 }
 
-/* create timeline tracks (UI) for animations panel */
-function _renderAnimationItems() {
+/* === UI DOM UPDATERS FOR ANIMATIONS PANEL === */
+
+/* internal helpers for animations panel */
+function _getStartTime(track) 	{ return _.get(track ,'options.delay', 0);						}
+function _getEndTime(track) 	{ return _getStartTime(track) + _.get(track, 'duration', 0); 	}
+
+/* create all animation timelines/tracks (UI) for animations panel */
+function _renderAnimations(tracks) {
 	// if the list is waiting for input empty it out before proceeding
-	_PANELS.animations.$list.filter('.waiting').empty();
-	_.each(tracks, _renderAnimationItem);
+	if(_.size(tracks)) {
+		_PANELS.animations.$list.filter('.waiting').empty().removeClass('waiting');
+		_.each(tracks, _renderAnimationItem);
+	}
 }
+/* internal helper to render all animations (UI for animations panel) of an item */
 function _renderAnimationItem(track) {
 	if(track) {
 		var properties = _.mapValues(track.properties, _.partial(_.sortBy, _, 'options.delay'));
 		var sceneElement = Danimator.sceneElement(track.item);
 		var $item = $('#animations-panel-item-' + track.item.id);
+		var $keyframes;
 
 		// render template into String
 		var $track = $(_PANELS.animations.template({
@@ -1454,38 +1470,46 @@ function _renderAnimationItem(track) {
 			})).data({ track: track, sceneElement: sceneElement, element: $track });
 
 		if($item.length) {
-			console.log('replacing parent!', track.item.id);
 			// replace existing DOM element if found
 			$item.replaceWith($track);									
+			$keyframes = $item.find('.keyframe');
 		} else {
 			// otherwise inject into DOM!
 			_PANELS.animations.$list.append($track);					
+			$keyframes = _PANELS.animations.$list.find('.keyframe');
 		}
-
-		var $frames = _PANELS.animations.$list.find('.keyframe');	// select keyframes
 
 		// add all full seconds to the snapping steps of keyframes
 		_snapKeyframes.list = _.range(Danimator.maxDuration);
 
-		$frames.each(function() {
+		$keyframes.each(function() {
 			var $this = $(this);
-			var _y = $this.top() - 7;
+			var _y = 0; //$this.top() - 7; /* dirty hack */
 			
 			var newTime;
 			var currentTrack;
 
-			var keyTime    = $this.data('time');
-			var $lastRange = $this.prev('.range');
-			var $nextRange = $this.next('.range');
+			var keyTime    = $this.data('time');	// time of current keyframe
+
+			var prevTime = $this.prevUntil('.keyframe').prev('.keyframe').data('time') || 0;
+			var nextTime = $this.nextUntil('.keyframe').next('.keyframe').data('time') || Danimator.maxDuration;
+
+			console.log(_.last($this.parent()[0].id.split('-')), prevTime * TIME_FACTOR + 1, nextTime * TIME_FACTOR - 1);
 
 			// add keyframe's time to snapping steps 
 			_snapKeyframes.add( keyTime );
 
 			$this.draggable({ 
-				containment: [ $lastRange.left() + 1, _y, $nextRange.right() - 1, _y],
-				cursor: 'pointer',
-				start: 	function() { _frameDragging = true; },
-				stop: 	function(event, ui) { 
+				axis: 		 'x',
+				containment: 'parent',
+				cursorAt: 	{ top: 2 },
+				//containment: [ prevTime * TIME_FACTOR + 1, _y, nextTime * TIME_FACTOR - 1, _y],
+				cursor: 	'pointer',
+
+				start: function() { _frameDragging = true; },
+				stop: function(event, ui) { 
+
+					var property = $this.closest('li.timeline').data('property');
 
 					_.each(currentTrack, function(track, index) {
 						// if startTime corresponds original time of currently dragged key
@@ -1501,19 +1525,21 @@ function _renderAnimationItem(track) {
 					});
 
 					_frameDragging = false; 
-					_renderAnimationItems();
+					
+					_renderTimeline(property, track);
 				},
 				drag: 	function(event, ui) { 
 					// wrapping in requestAnimationFrame() to enhance performance (see http://37signals.com/talks/soundslice at 35:40)
 					requestAnimationFrame(function() {
-						_frameDragging = true;
-
 						var x 			= ui.position.left - 1;
 						var index 	 	= $this.closest('.track').find('.keyframe').index($this);
 						var property 	= $this.closest('li.timeline').data('property');
 
+						_frameDragging = true;
 						currentTrack 	= $this.closest('li.item').data('track').properties[property];
 						newTime 		= x / TIME_FACTOR;
+
+						// console.log('we dragging', {x, index, property, newTime, currentTrack});
 
 						/* snap to snapping points onShiftHold */
 						if(event.shiftKey) {
@@ -1543,12 +1569,13 @@ function _renderAnimationItem(track) {
 	}
 }
 
-function _getTimeline(ranges, property, track) {
+/* internal helper to create the HTML string for the timeline (UI for animations panel) of a specific property animation */
+function _getTimeline(property, track) {
 	return _PANELS.animations.timeline.template({
 		Danimator: 		Danimator,
 		TIME_FACTOR: 	TIME_FACTOR,
 		property: 		property,
-		ranges: 		ranges,
+		ranges: 		track.properties[property],
 		slug: 			slug,
 		track: 			track,
 		getTrigger: 	function(range) { 
@@ -1559,20 +1586,28 @@ function _getTimeline(ranges, property, track) {
 	});
 }
 
-function _renderTimeline(ranges, property, track) {
+/* internal helper to render the timeline (UI for animations panel) of a specific property animation */
+function _renderTimeline(property, track) {
 	var $list = $('#animations-panel-item-' + track.item.id + ' ul');
 	var $item = $('#animations-panel-item-' + track.item.id + '-' + slug(property));
-	var timeline = _getTimeline(ranges, property, track);
 
-	if($item.length) {
-		console.log('replacing parent!', track.item.id);
-		// replace existing DOM element if found
-		$item.replaceWith(timeline);									
+	// if there's no parent yet -> create it!
+	if(!$list.length) {
+		_renderAnimationItem(track);
 	} else {
-		// otherwise inject into DOM!
-		$list.append(timeline);
-	}
+		var timeline = _getTimeline(property, track);
+		
+		if($item.length) {
+			// replace existing DOM element if found
+			$item.replaceWith(timeline);									
+		} else {
+			// otherwise inject into DOM!
+			$list.append(timeline);
+		}
+	}	
 }
+
+/* === UI DOM UPDATERS FOR PROPERTIES PANEL === */
 
 /* create properties (UI) for properties panel */
 function _renderProperties(properties, $props, item, subitem, path) {
@@ -1762,7 +1797,7 @@ Game.onLoad = function(project, name, options) {
 						delete export_JSON;
 						break;
 					case 'svg':
-						console.log('what about the SVG?');
+						console.warn('what about the SVG?');
 						break;
 				}
 			//}
@@ -1782,8 +1817,21 @@ Game.onLoad = function(project, name, options) {
 			var itemId 		 = sceneElement.item.id;
 			var currentTrack;
 
-			$time.text(_.round(time, 2) + 's');
+			var _humanTime = time < 1 ? _.round(time * 1000) +  'ms' : _.round(time, 2) + 's';
+
+			$time.text(_humanTime);
 			$scrubber.css('left', time * TIME_FACTOR);
+
+			var $track = $scrubber.closest('.track');
+
+			$track.find('.keyframe').removeClass('active').each(function() {
+				var $this = $(this);
+				if(Math.abs(Danimator.time - $this.data('time')) < 0.001) {
+					$this.addClass('active');
+				}
+			});
+
+			return true;
 
 			var allTracks = tracks[itemId].properties[property];
 
@@ -2039,6 +2087,7 @@ Game.onLoad = function(project, name, options) {
 	self.container.appendTop(_anchorViz);
 
 	_renderLayers(layers, _PANELS.layers.$element.find('ul').empty());
+	_renderAnimations(tracks);
 
 	if(!Danimator.sound) _PANELS.audio.$element.hide();
 

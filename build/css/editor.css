@@ -100,8 +100,6 @@ canvas[resize] {
     height: 22px; }
     .panel.collapsed > label .toggle::after {
       content: "+"; }
-  .panel.ui-draggable-dragging {
-    z-index: 1000; }
   .panel.ui-draggable-dragging > label,
   .panel:active > label {
     cursor: -webkit-grabbing;
