@@ -367,8 +367,6 @@ jQuery(window).on('popstate', function(event, state) {
     undoHistory.goto(event.originalEvent.state.undoIndex);
 });;
 /* animation editor engine */
-// TODOS:
-// ø only rerender changed timelines instead of all
 
 var currentGame;
 var tracks   		= {};
@@ -701,8 +699,6 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 	track.properties[property] = propertyTrack;
 	tracks[item.id] = track;
 
-	// ensure createTracks is only called a max of every second
-	console.log('property1', property, track);
 	_renderTimeline(property, track);
 
 	/* return handles for easier chaining of animations */
@@ -1494,8 +1490,6 @@ function _renderAnimationItem(track) {
 			var prevTime = $this.prevUntil('.keyframe').prev('.keyframe').data('time') || 0;
 			var nextTime = $this.nextUntil('.keyframe').next('.keyframe').data('time') || Danimator.maxDuration;
 
-			console.log(_.last($this.parent()[0].id.split('-')), prevTime * TIME_FACTOR + 1, nextTime * TIME_FACTOR - 1);
-
 			// add keyframe's time to snapping steps 
 			_snapKeyframes.add( keyTime );
 
@@ -1588,23 +1582,25 @@ function _getTimeline(property, track) {
 
 /* internal helper to render the timeline (UI for animations panel) of a specific property animation */
 function _renderTimeline(property, track) {
-	var $list = $('#animations-panel-item-' + track.item.id + ' ul');
-	var $item = $('#animations-panel-item-' + track.item.id + '-' + slug(property));
+	requestAnimationFrame(function() {
+		var $list = $('#animations-panel-item-' + track.item.id + ' ul');
+		var $item = $('#animations-panel-item-' + track.item.id + '-' + slug(property));
 
-	// if there's no parent yet -> create it!
-	if(!$list.length) {
-		_renderAnimationItem(track);
-	} else {
-		var timeline = _getTimeline(property, track);
-		
-		if($item.length) {
-			// replace existing DOM element if found
-			$item.replaceWith(timeline);									
+		// if there's no parent yet -> create it!
+		if(!$list.length) {
+			_renderAnimationItem(track);
 		} else {
-			// otherwise inject into DOM!
-			$list.append(timeline);
-		}
-	}	
+			var timeline = _getTimeline(property, track);
+			
+			if($item.length) {
+				// replace existing DOM element if found
+				$item.replaceWith(timeline);									
+			} else {
+				// otherwise inject into DOM!
+				$list.append(timeline);
+			}
+		}	
+	});
 }
 
 /* === UI DOM UPDATERS FOR PROPERTIES PANEL === */
@@ -1806,6 +1802,8 @@ Game.onLoad = function(project, name, options) {
 		resetLoading('saveAll');
 	}	
 
+	var _onTimeChangedTimeout;
+
 	Danimator.onTimeChanged = function danimatorTimeChanged(time) {
 		var $inputs = _PANELS.properties.$element.find('li').removeClass('keyed');
 
@@ -1815,6 +1813,8 @@ Game.onLoad = function(project, name, options) {
 			var sceneElement = Danimator.sceneElement($scrubber.closest('li.item'));
 			var property 	 = $scrubber.closest('li.timeline').data('property');
 			var itemId 		 = sceneElement.item.id;
+			var $track 		 = $scrubber.closest('.track');
+
 			var currentTrack;
 
 			var _humanTime = time < 1 ? _.round(time * 1000) +  'ms' : _.round(time, 2) + 's';
@@ -1822,8 +1822,7 @@ Game.onLoad = function(project, name, options) {
 			$time.text(_humanTime);
 			$scrubber.css('left', time * TIME_FACTOR);
 
-			var $track = $scrubber.closest('.track');
-
+			/* highlight all tracks that are at the current point in time */
 			$track.find('.keyframe').removeClass('active').each(function() {
 				var $this = $(this);
 				if(Math.abs(Danimator.time - $this.data('time')) < 0.001) {
@@ -1831,74 +1830,46 @@ Game.onLoad = function(project, name, options) {
 				}
 			});
 
-			return true;
-
 			var allTracks = tracks[itemId].properties[property];
 
-			/* retrieve all tracks before current time and sort them chronologically */
-			currentTracks = _.sortBy(_.filter(allTracks, function(track) {
-				return track.options.delay <= time + _.get(track.options, 'frameDuration', 1/24);
-			}), 'options.delay');
+			requestAnimationFrame(function(){
+				/* retrieve all tracks that encompass the current time and sort them chronologically */
+				currentTracks = _(allTracks).filter(function(track) {
+					//###TODO: check for first track if time < _getStartTime(firstTrack)
+					return _.inRange(time, _getStartTime(track), _getEndTime(track) + _.get(track.options, 'frameDuration', 1/24));
+				}).sortBy('options.delay').each(function(currentTrack) {
+					/* update current track in animation panel and property in properties panel */
+					var startTime 	= _getStartTime(currentTrack);
+					var endTime 	= _getEndTime(currentTrack);
+					var t 			= Math.max((time - startTime) / (endTime - startTime), 0);
 
-			/* find track that encompasses current time */
-			_.each(currentTracks, function(track, id) {
-				if(_.inRange(time, _getStartTime(track), _getEndTime(track) + _.get(track.options, 'frameDuration', 1/24))) {
-					currentTrack = track;
-					currentTrack.id = id;
-					return false;
-				}
-			});
+					currentTrack.item 		= tracks[itemId].item;
+					currentTrack.property 	= property;
 
-			var $track  	= $scrubber.closest('.track');
-			var hasActives 	= false;
-			$track.find('.keyframe').removeClass('active');
-
-			/* highlight the keyframe that corresponds to the current time */
-			if(currentTrack) {
-				var isFirstFrame = (time - _getStartTime(currentTrack)) <= 0.05;
-				var isLastFrame  = (_getEndTime(currentTrack) - time)   <= 0;
-
-				if(isFirstFrame) {
-					$track.find('.keyframe').eq( currentTrack.id * 2 ).addClass('active');
-				} else if(isLastFrame) {
-					$track.find('.keyframe').eq( currentTrack.id * 2 + 1).addClass('active');
-				}
-
-				hasActives = isFirstFrame || isLastFrame;
-			} else {
-				currentTrack = _.maxBy(allTracks, 'options.delay');
-			}
-
-			/* update current track in animation panel and property in properties panel */
-			if(currentTrack) {
-				var startTime 	= _getStartTime(currentTrack);
-				var endTime 	= _getEndTime(currentTrack);
-				var t 			= Math.max((time - startTime) / (endTime - startTime), 0);
-
-				currentTrack.item 		= tracks[itemId].item;
-				currentTrack.property 	= property;
-
-				if(hasActives) {
 					if(selectedElements.has(sceneElement)) {
 						$inputs.find('input[data-prop="' + property + '"]').parent().addClass('keyed');
 					}
-				}
 
-				var ani = Danimator.step(currentTrack, t);
-				var value;
+					var ani = Danimator.step(currentTrack, t);
+					var value;
 
-				// round all numbers to 2 decimals
-				if(_.isNumber(ani.value)) {
-					value = _.round(ani.value,2);
-				} else {
-					value = '"' + ani.value + '"';
-				}
-
-				if($currentTrack && $currentTrack.length)
-					if($.contains($currentTrack[0], $scrubber[0])) {
-						$animationValue.text(property + ' = ' + value);
+					// round all numbers to 2 decimals
+					if(_.isNumber(ani.value)) {
+						value = _.round(ani.value,2);
+					} else {
+						value = '"' + ani.value + '"';
 					}
-			}
+
+					// if a particular track is active
+					if($currentTrack && $currentTrack.length)
+						// and the current scrubber is from that track
+						if($.contains($currentTrack[0], $scrubber[0])) {
+							// show value in animations panel
+							$animationValue.text(property + ' = ' + value);
+						}
+				});
+			}); //, 10);
+
 		});
 
 		// get name of function that triggered Danimator.setTime which triggered Danimator.onTimeChanged (parent of parent func)
