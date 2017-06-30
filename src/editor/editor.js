@@ -511,8 +511,9 @@ jQuery(function($){
 		/* keyframes time input */
 		.on('blur', 'time', function(event) {
 			var $this = $(this);
-			var value = Number($this.text().replace(/[^\d\.\,]*/g, ''));
-			var unit = $this.text().match(/[^\d]+/g)[0];
+			var text  = $this.text();
+			var value = Number(text.replace(/[^\d\.\,]*/g, ''));
+			var unit  = _.first(text.match(/[^\d]+/g)) || 's';
 
 			if(isNaN(value)) {
 				value = Danimator.time;
@@ -606,12 +607,13 @@ jQuery(function($){
 
 			if(duration && !isNaN(duration)) {
 				var $this 	= $(this);
-				var item 	= $this.closest('li.item').data('track').item;
-				var prop 	= $this.closest('li.timeline').data('property');
-				var value 	= _.get(item, prop);
+				var track 	= $this.closest('li.item').data('track');
+				var item 	= track.item;
+				var property 	= $this.closest('li.timeline').data('property');
+				var value 	= _.get(item, property);
 
-				Danimator(item, prop, value, value, duration, { delay: Danimator.time });
-				_renderAnimations(tracks);
+				Danimator(item, property, value, value, duration, { delay: Danimator.time });
+				_renderTimeline(property, track);
 			} else {
 				alert('You have to supply a floating number for duration!', 'error');
 			}
@@ -701,8 +703,7 @@ jQuery(function($){
 							track.to = value;
 						}
 					});
-
-					_renderAnimations(tracks);
+					_renderTimeline(prop, tracks[itemId]);
 				}
 
 				$this.data('oldValue', value);
