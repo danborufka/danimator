@@ -1076,6 +1076,7 @@ function _getEndTime(track) 	{ return _getStartTime(track) + _.get(track, 'durat
 
 /* create all animation timelines/tracks (UI) for animations panel */
 function _renderAnimations(tracks) {
+	console.log('render AIs');
 	// if the list is waiting for input empty it out before proceeding
 	if(_.size(tracks)) {
 		_PANELS.animations.$list.filter('.waiting').empty().removeClass('waiting');
@@ -1084,6 +1085,7 @@ function _renderAnimations(tracks) {
 }
 /* internal helper to render all animations (UI for animations panel) of an item */
 function _renderAnimationItem(track) {
+	console.log('render AI');
 	if(track) {
 		var properties = _.mapValues(track.properties, _.partial(_.sortBy, _, 'options.delay'));
 		var sceneElement = Danimator.sceneElement(track.item);
@@ -1111,14 +1113,63 @@ function _renderAnimationItem(track) {
 		// add all full seconds to the snapping steps of keyframes
 		_snapKeyframes.list = _.range(Danimator.maxDuration);
 
-		$keyframes.each(function() {
+		_attachTimelineHandlers($keyframes);
+	}
+}
+
+/* internal helper to create the HTML string for the timeline (UI for animations panel) of a specific property animation */
+function _getTimeline(property, track) {
+	console.log('get TL');
+	return _PANELS.animations.timeline.template({
+		Danimator: 		Danimator,
+		TIME_FACTOR: 	TIME_FACTOR,
+		property: 		property,
+		ranges: 		track.properties[property],
+		slug: 			slug,
+		track: 			track,
+		getTrigger: 	function(range) { 
+			if(_normalizeTrigger(range.caller).length) {
+				return ' triggered';
+			}
+		}
+	});
+}
+
+/* internal helper to render the timeline (UI for animations panel) of a specific property animation */
+var _renderTimeline = _.throttle(function(property, track) {
+	console.log('render TL');
+	requestAnimationFrame(function() {
+		var $list = $('#animations-panel-item-' + track.item.id + ' ul');
+		var $item = $('#animations-panel-item-' + track.item.id + '-' + slug(property));
+
+		console.log('render TL');
+
+		// if there's no parent yet -> create it!
+		if(!$list.length) {
+			_renderAnimationItem(track);
+		} else {
+			var timeline = _getTimeline(property, track);
+			if($item.length) {
+				// replace existing DOM element if found
+				$item.replaceWith(timeline);									
+			} else {
+				// otherwise inject into DOM!
+				$list.append(timeline);
+			}
+			_attachTimelineHandlers($item.find('.keyframe'));
+		}	
+	});
+}, 20);
+
+function _attachTimelineHandlers($keyframes) {
+	console.log('attach TL', $keyframes);
+	$keyframes.each(function() {
 			var $this = $(this);
-			var _y = 0; //$this.top() - 7; /* dirty hack */
 			
 			var newTime;
 			var currentTrack;
 
-			var keyTime    = $this.data('time');	// time of current keyframe
+			var keyTime  = $this.data('time');	// time of current keyframe
 
 			var prevTime = $this.prevUntil('.keyframe').prev('.keyframe').data('time') || 0;
 			var nextTime = $this.nextUntil('.keyframe').next('.keyframe').data('time') || Danimator.maxDuration;
@@ -1128,9 +1179,9 @@ function _renderAnimationItem(track) {
 
 			$this.draggable({ 
 				axis: 		 'x',
-				containment: 'parent',
+				//containment: 'parent',
 				cursorAt: 	{ top: 2 },
-				//containment: [ prevTime * TIME_FACTOR + 1, _y, nextTime * TIME_FACTOR - 1, _y],
+				//containment: [ prevTime * TIME_FACTOR + 1, 0, nextTime * TIME_FACTOR - 1, 0],
 				cursor: 	'pointer',
 
 				start: function() { _frameDragging = true; },
@@ -1157,7 +1208,8 @@ function _renderAnimationItem(track) {
 				},
 				drag: 	function(event, ui) { 
 					// wrapping in requestAnimationFrame() to enhance performance (see http://37signals.com/talks/soundslice at 35:40)
-					requestAnimationFrame(function() {
+					//requestAnimationFrame(function() {
+						console.log('drag KF?');
 						var x 			= ui.position.left - 1;
 						var index 	 	= $this.closest('.track').find('.keyframe').index($this);
 						var property 	= $this.closest('li.timeline').data('property');
@@ -1189,51 +1241,10 @@ function _renderAnimationItem(track) {
 
 						$prevRange.width( x - $prevRange.position().left );
 						$nextRange.css(nextRangeDimensions);					// position "range" right after keyframe
-					});
+					//});
 				}
 			});
 		});
-	}
-}
-
-/* internal helper to create the HTML string for the timeline (UI for animations panel) of a specific property animation */
-function _getTimeline(property, track) {
-	return _PANELS.animations.timeline.template({
-		Danimator: 		Danimator,
-		TIME_FACTOR: 	TIME_FACTOR,
-		property: 		property,
-		ranges: 		track.properties[property],
-		slug: 			slug,
-		track: 			track,
-		getTrigger: 	function(range) { 
-			if(_normalizeTrigger(range.caller).length) {
-				return ' triggered';
-			}
-		}
-	});
-}
-
-/* internal helper to render the timeline (UI for animations panel) of a specific property animation */
-function _renderTimeline(property, track) {
-	requestAnimationFrame(function() {
-		var $list = $('#animations-panel-item-' + track.item.id + ' ul');
-		var $item = $('#animations-panel-item-' + track.item.id + '-' + slug(property));
-
-		// if there's no parent yet -> create it!
-		if(!$list.length) {
-			_renderAnimationItem(track);
-		} else {
-			var timeline = _getTimeline(property, track);
-			
-			if($item.length) {
-				// replace existing DOM element if found
-				$item.replaceWith(timeline);									
-			} else {
-				// otherwise inject into DOM!
-				$list.append(timeline);
-			}
-		}	
-	});
 }
 
 /* === UI DOM UPDATERS FOR PROPERTIES PANEL === */
