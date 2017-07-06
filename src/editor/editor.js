@@ -1448,9 +1448,36 @@ Game.onLoad = function(project, name, options) {
 
 	var _onTimeChangedTimeout;
 
-	Danimator.onTimeChanged = function danimatorTimeChanged(time) {
-		var $inputs = _PANELS.properties.$element.find('li').removeClass('keyed');
+	var _timeStep = function(t, sceneElement, property, currentTrack, $scrubber) {
+		/* update current track in animation panel and property in properties panel */
+		var $inputs 	= _PANELS.properties.$element.find('li').removeClass('keyed');
+		currentTrack.item 		= tracks[sceneElement.item.id].item;
+		currentTrack.property 	= property;
 
+		if(selectedElements.has(sceneElement)) {
+			$inputs.find('input[data-prop="' + property + '"]').parent().addClass('keyed');
+		}
+
+		var ani = Danimator.step(currentTrack, t);
+		var value;
+
+		// round all numbers to 2 decimals
+		if(_.isNumber(ani.value)) {
+			value = _.round(ani.value,2);
+		} else {
+			value = '"' + ani.value + '"';
+		}
+
+		// if a particular track is active
+		if($currentTrack && $currentTrack.length)
+			// and the current scrubber is from that track
+			if($.contains($currentTrack[0], $scrubber[0])) {
+				// show value in animations panel
+				$animationValue.text(property + ' = ' + value);
+			}
+	}
+
+	Danimator.onTimeChanged = function danimatorTimeChanged(time) {
 		/* update all scrubbes */
 		$('.timeline .scrubber').each(function(){
 			var $scrubber 	 = $(this);
@@ -1478,42 +1505,41 @@ Game.onLoad = function(project, name, options) {
 
 			requestAnimationFrame(function(){
 				/* retrieve all tracks that encompass the current time and sort them chronologically */
-				currentTracks = _(allTracks).filter(function(track) {
-					//###TODO: check for first track if time < _getStartTime(firstTrack)
-					return _.inRange(time, _getStartTime(track), _getEndTime(track) + _.get(track.options, 'frameDuration', 1/24));
-				}).sortBy('options.delay').each(function(currentTrack) {
-					/* update current track in animation panel and property in properties panel */
-					var startTime 	= _getStartTime(currentTrack);
-					var endTime 	= _getEndTime(currentTrack);
-					var t 			= Math.max((time - startTime) / (endTime - startTime), 0);
+				var firstTrack = allTracks[0];
+				var lastTrack  = _.last(allTracks);
 
-					currentTrack.item 		= tracks[itemId].item;
-					currentTrack.property 	= property;
+				// if playhead is before first keyframe assume its value
+				if(time < _getStartTime(firstTrack)) {
+					_timeStep(0, sceneElement, property, firstTrack, $scrubber);
+				// if playhead is past last keyframe assume its value
+				} else if(time > _getEndTime(lastTrack)) {
+					_timeStep(1, sceneElement, property, lastTrack, $scrubber);
+				// otherwise calculate step between current keyframes
+				} else {
+					// reuse of lastTrack as reference to "previous track" in the following each loop
+					lastTrack = firstTrack;
 
-					if(selectedElements.has(sceneElement)) {
-						$inputs.find('input[data-prop="' + property + '"]').parent().addClass('keyed');
-					}
+					_.each(allTracks, function(currentTrack) {
 
-					var ani = Danimator.step(currentTrack, t);
-					var value;
+						var startTime  = _getStartTime(currentTrack);
+						var endTime    = _getEndTime(currentTrack);
 
-					// round all numbers to 2 decimals
-					if(_.isNumber(ani.value)) {
-						value = _.round(ani.value,2);
-					} else {
-						value = '"' + ani.value + '"';
-					}
-
-					// if a particular track is active
-					if($currentTrack && $currentTrack.length)
-						// and the current scrubber is from that track
-						if($.contains($currentTrack[0], $scrubber[0])) {
-							// show value in animations panel
-							$animationValue.text(property + ' = ' + value);
+						// if keyframe is in the future we can skip all following tracks (since they are sorted chronologically)
+						if(startTime > time) {
+							return false;
+						} else {
+							if(_.inRange(time, startTime, endTime + 0.0001)) {
+								var t = Math.max((time - startTime) / (endTime - startTime), 0);
+								_timeStep(t, sceneElement, property, currentTrack, $scrubber);
+							} else {
+								_timeStep(1, sceneElement, property, lastTrack, $scrubber);
+							}
 						}
-				});
-			}); //, 10);
+						lastTrack = currentTrack;
+					});
+				}
 
+			});
 		});
 
 		// get name of function that triggered Danimator.setTime which triggered Danimator.onTimeChanged (parent of parent func)
