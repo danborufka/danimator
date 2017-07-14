@@ -621,7 +621,7 @@ function alert(message, mode) 	{
 	alertify && alertify.notify(message, mode || 'success');
 }
 /* helper to turn a string into alphachars only */
-function slug(name) 	{ return name.replace(/[^a-z0-9_\-]+/g, '_'); }
+function slug(name) 	{ return name.replace(/[^a-zA-Z0-9_\-]+/g, '_'); }
 function noop(anything) { return anything; };
 
 /* helpers for loading states */
@@ -1510,8 +1510,6 @@ var _renderTimeline = _.throttle(function(property, track) {
 		var $list = $('#animations-panel-item-' + track.item.id + ' ul');
 		var $item = $('#animations-panel-item-' + track.item.id + '-' + slug(property));
 
-		console.log('render TL');
-
 		// if there's no parent yet -> create it!
 		if(!$list.length) {
 			_renderAnimationItem(track);
@@ -1530,7 +1528,7 @@ var _renderTimeline = _.throttle(function(property, track) {
 }, 20);
 
 function _attachTimelineHandlers($keyframes) {
-	console.log('attach TL', $keyframes);
+	console.log('===attach===');
 	$keyframes.each(function() {
 			var $this = $(this);
 			
@@ -1538,24 +1536,28 @@ function _attachTimelineHandlers($keyframes) {
 			var currentTrack;
 
 			var keyTime  = $this.data('time');	// time of current keyframe
-
 			var prevTime = $this.prevUntil('.keyframe').prev('.keyframe').data('time') || 0;
 			var nextTime = $this.nextUntil('.keyframe').next('.keyframe').data('time') || Danimator.maxDuration;
 
 			// add keyframe's time to snapping steps 
 			_snapKeyframes.add( keyTime );
 
+			console.log('containment', $this.parent().prev().text() , [ prevTime * TIME_FACTOR + 1, nextTime * TIME_FACTOR - 1]);
+
 			$this.draggable({ 
 				axis: 		 'x',
+				cursorAt: 	 { top: 3 },
 				//containment: 'parent',
-				cursorAt: 	{ top: 2 },
 				//containment: [ prevTime * TIME_FACTOR + 1, 0, nextTime * TIME_FACTOR - 1, 0],
 				cursor: 	'pointer',
 
-				start: function() { _frameDragging = true; },
+				start: function(event, ui) { 
+					_frameDragging = true; 
+				},
 				stop: function(event, ui) { 
-
 					var property = $this.closest('li.timeline').data('property');
+
+					$this.css('top', 0);
 
 					_.each(currentTrack, function(track, index) {
 						// if startTime corresponds original time of currently dragged key
@@ -1569,15 +1571,18 @@ function _attachTimelineHandlers($keyframes) {
 							track.duration = newTime - _getStartTime(track);
 						}
 					});
-
 					_frameDragging = false; 
 					
-					_renderTimeline(property, track);
+					console.log('ui.originalPosition.top', ui.originalPosition.top);
+					console.log('ui.position.top', ui.position.top);
+
+					//_renderTimeline(property, track);
 				},
 				drag: 	function(event, ui) { 
 					// wrapping in requestAnimationFrame() to enhance performance (see http://37signals.com/talks/soundslice at 35:40)
 					//requestAnimationFrame(function() {
-						console.log('drag KF?');
+						$this.css('top', 0);
+
 						var x 			= ui.position.left - 1;
 						var index 	 	= $this.closest('.track').find('.keyframe').index($this);
 						var property 	= $this.closest('li.timeline').data('property');

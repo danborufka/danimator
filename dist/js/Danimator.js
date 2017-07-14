@@ -17177,6 +17177,99 @@ try {
 
 var animations = [];
 
+/**
+ * sceneElement class
+ * for easy access to a Paper.js item's: 
+ * - children
+ * - DOM correspondant (in the SVG DOM tree)
+ * - states
+ * - frames
+ */
+function sceneElement(parent) {
+	var self = this;
+
+	// save (non-enumerable) reference to Paper.js item
+	Object.defineProperty(self, 'item', { enumerable: false, writable: false, configurable: false, 
+		value: 	parent 
+	});
+
+	// save (non-enumerable) reference to DOM element
+	if(parent.name) {
+		Object.defineProperty(self, '$element', { enumerable: false, writable: false, configurable: false, 
+			value: 	parent.data.sceneRoot ? paper.$dom : paper.$dom && paper.$dom.find('#' + parent.name)
+		});
+	}
+
+	if(parent.children) {
+		_.each(parent.children, function(child, childId) {
+
+			if(!child.name) {
+				child.name = 'element_' + child.id;
+				self.$element.children(':eq(' + childId + ')').attr('id', child.name);
+			}
+
+			var $element = paper.$dom.find('#' + child.name);
+			var branch = new sceneElement(child);
+
+			var originalName = String($element.data('name') || child.name);
+			var frameMatch;
+
+			// state detected!
+			if(originalName[0] === '#') {
+				if(!parent.data._states) parent.data._states = {};
+
+				originalName = originalName.slice(1);
+				parent.data._states[originalName] = child;
+
+				if(_.size(parent.data._states) > 1) { 
+					child.visible = false;
+				} else {
+					parent.data._state = parent.data._state || originalName;
+				}
+			// frame detected!
+			} else if(frameMatch = originalName.match(/^f(\d+)/)) {
+				var frame = parseInt(Number(frameMatch[1]));
+				parent.data._frames = Math.max(parent.data._frames || 1, frame);
+				if(frame > 1) child.visible = false;
+			}
+
+			$element.data('sceneElement', branch);
+			
+			self[originalName] = branch;
+
+			child.data.sceneElement = branch;
+		});
+	}
+
+	return self;
+}
+sceneElement.prototype.className = 'sceneElement';
+sceneElement.prototype.data = {};
+
+/* helper to find elements within elements (by original name or name given during export) */
+sceneElement.prototype.find = function(selector) {
+	return false;
+	// find in DOM by data-name, which is the attrib Illustrator saves the original layer names in
+	var $doms = this.$element.find('[data-name="' + selector + '"],#' + selector);
+	return $doms.map(function() {
+		// and map to their according scene element rather than DOM elements
+		var element = $(this).data('sceneElement');
+		if(!element) {
+			var item = paper.project.getItem({ name: selector });
+			element = item.data.sceneElement = new sceneElement(item);
+			$(this).data('sceneElement', element);
+		}
+		return element;
+	}).get();
+};
+
+// (non-enumerable) getter to retrieve children of sceneElement as disassociative array
+Object.defineProperty(sceneElement.prototype, 'ordered', { enumerable: false,
+	get: function() {
+		return _.values(this);
+	}
+});
+
 /* create Danimator as main object and, at the same time, as shortcut to Danimator.animate */
 if(!this.Danimator) {
 	Danimator = function Danimator() { return Danimator.animate.apply(Danimator, arguments); };
@@ -17188,13 +17281,13 @@ Danimator.triggers = [];
 Object.defineProperty(Danimator, 'time', {
   get: function()     { return Danimator._time },
   set: function(secs) {
-  	Danimator._time = Math.max(secs, 0);						// limit seconds to positive value
+  	Danimator._time = Math.max(secs, 0);										// limit seconds to positive value
   	if(Danimator.onTimeChanged) Danimator.onTimeChanged(Danimator._time);		// call global hook everytime time gets changed
   	return Danimator;
   }
 });
 
-/* retrieve sceneElement from DOM element, jQuery element, Paper.js item or Danimator sceneElement */
+/* feed with DOM element, jQuery element, or Paper.js item and get associated sceneElement in return */
 Danimator.sceneElement = function danimatorSceneElement(element) {
 	if(element.className === 'sceneElement') return element;
 	if(element instanceof jQuery) return element.data('sceneElement');
@@ -17633,96 +17726,6 @@ Danimator.morph = function danimatorMorph(fromItem, toItem, duration, options) {
 		}
 	});
 }
-/**
- * sceneElement class
- * for easy access to a Paper.js item's: 
- * - children
- * - DOM correspondant (in the SVG DOM tree)
- * - states
- * - frames
- */
-function sceneElement(parent) {
-	var self = this;
-
-	// save (non-enumerable) reference to Paper.js item
-	Object.defineProperty(self, 'item', { enumerable: false, writable: false, configurable: false, 
-		value: 	parent 
-	});
-
-	// save (non-enumerable) reference to DOM element
-	if(parent.name) {
-		Object.defineProperty(self, '$element', { enumerable: false, writable: false, configurable: false, 
-			value: 	parent.data.sceneRoot ? paper.$dom : paper.$dom && paper.$dom.find('#' + parent.name)
-		});
-	}
-
-	if(parent.children) {
-		_.each(parent.children, function(child, childId) {
-
-			if(!child.name) {
-				child.name = 'element_' + child.id;
-				self.$element.children(':eq(' + childId + ')').attr('id', child.name);
-			}
-
-			var $element = paper.$dom.find('#' + child.name);
-			var branch = new sceneElement(child);
-
-			var originalName = String($element.data('name') || child.name);
-			var frameMatch;
-
-			// state detected!
-			if(originalName[0] === '#') {
-				if(!parent.data._states) parent.data._states = {};
-
-				originalName = originalName.slice(1);
-				parent.data._states[originalName] = child;
-
-				if(_.size(parent.data._states) > 1) { 
-					child.visible = false;
-				} else {
-					parent.data._state = parent.data._state || originalName;
-				}
-			// frame detected!
-			} else if(frameMatch = originalName.match(/^f(\d+)/)) {
-				var frame = parseInt(Number(frameMatch[1]));
-				parent.data._frames = Math.max(parent.data._frames || 1, frame);
-				if(frame > 1) child.visible = false;
-			}
-
-			$element.data('sceneElement', branch);
-			
-			self[originalName] = branch;
-
-			child.data.sceneElement = branch;
-		});
-	}
-
-	return self;
-}
-sceneElement.prototype.className = 'sceneElement';
-sceneElement.prototype.data = {};
-sceneElement.prototype.find = function(selector) {
-	return false;
-	// find in DOM by data-name, which is the attrib Illustrator saves the original layer names in
-	var $doms = this.$element.find('[data-name="' + selector + '"],#' + selector);
-	return $doms.map(function() {
-		// and map to their according scene element rather than DOM elements
-		var element = $(this).data('sceneElement');
-		if(!element) {
-			var item = paper.project.getItem({ name: selector });
-			element = item.data.sceneElement = new sceneElement(item);
-			$(this).data('sceneElement', element);
-		}
-		return element;
-	}).get();
-};
-
-// (non-enumerable) getter to retrieve children as disassociative array
-Object.defineProperty(sceneElement.prototype, 'ordered', { enumerable: false,
-	get: function() {
-		return _.values(this);
-	}
-});
 
 
 /* Paper.js injections */
