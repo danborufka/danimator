@@ -6,7 +6,7 @@ Advanced scalable vector graphics animations/interactions based on Paper.js
 ## The What and the Why
 
 Paper.js is great for interactive manipulation of paths, but it becomes tiresome when it comes to organic animations.
-Danimator solves that by providing intuitive abstractions to both [time- and frame-based animations](), [shape morphing](), [blazing fast DOM traversal](), [sound creation](), and much more.
+Danimator solves that by providing intuitive abstractions to both [time- and frame-based animations](#), [shape morphing](#), [blazing fast DOM traversal](#), [sound creation](#), and much more.
 Let's bring back the power of proper vector animations to the browser!
 
 ## Quick Start
