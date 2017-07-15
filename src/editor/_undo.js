@@ -161,7 +161,6 @@ function Undoable(redo, undo, title, silent) {
     self.undo = undo;
     self.redo = redo;
 
-
     undoHistory.index++;
     undoHistory.title = title || 'last action';
 

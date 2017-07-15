@@ -30,6 +30,7 @@ jQuery('.panel').each(function() {
 	$panel
 		.draggable({ 
 			handle: 		'>label', 
+			stack: 			'.panel',
 			containment: 	[0, 0, $(window).width() - $panel.width(), $(window).height() - $panel.height()],
 			stop: 			function() {
 				localStorage.setItem('editor-panels-' + $panel[0].id + '-pos', JSON.stringify($panel.offset()));

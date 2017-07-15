@@ -17177,6 +17177,99 @@ try {
 
 var animations = [];
 
+/**
+ * sceneElement class
+ * for easy access to a Paper.js item's: 
+ * - children
+ * - DOM correspondant (in the SVG DOM tree)
+ * - states
+ * - frames
+ */
+function sceneElement(parent) {
+	var self = this;
+
+	// save (non-enumerable) reference to Paper.js item
+	Object.defineProperty(self, 'item', { enumerable: false, writable: false, configurable: false, 
+		value: 	parent 
+	});
+
+	// save (non-enumerable) reference to DOM element
+	if(parent.name) {
+		Object.defineProperty(self, '$element', { enumerable: false, writable: false, configurable: false, 
+			value: 	parent.data.sceneRoot ? paper.$dom : paper.$dom && paper.$dom.find('#' + parent.name)
+		});
+	}
+
+	if(parent.children) {
+		_.each(parent.children, function(child, childId) {
+
+			if(!child.name) {
+				child.name = 'element_' + child.id;
+				self.$element.children(':eq(' + childId + ')').attr('id', child.name);
+			}
+
+			var $element = paper.$dom.find('#' + child.name);
+			var branch = new sceneElement(child);
+
+			var originalName = String($element.data('name') || child.name);
+			var frameMatch;
+
+			// state detected!
+			if(originalName[0] === '#') {
+				if(!parent.data._states) parent.data._states = {};
+
+				originalName = originalName.slice(1);
+				parent.data._states[originalName] = child;
+
+				if(_.size(parent.data._states) > 1) { 
+					child.visible = false;
+				} else {
+					parent.data._state = parent.data._state || originalName;
+				}
+			// frame detected!
+			} else if(frameMatch = originalName.match(/^f(\d+)/)) {
+				var frame = parseInt(Number(frameMatch[1]));
+				parent.data._frames = Math.max(parent.data._frames || 1, frame);
+				if(frame > 1) child.visible = false;
+			}
+
+			$element.data('sceneElement', branch);
+			
+			self[originalName] = branch;
+
+			child.data.sceneElement = branch;
+		});
+	}
+
+	return self;
+}
+sceneElement.prototype.className = 'sceneElement';
+sceneElement.prototype.data = {};
+
+/* helper to find elements within elements (by original name or name given during export) */
+sceneElement.prototype.find = function(selector) {
+	return false;
+	// find in DOM by data-name, which is the attrib Illustrator saves the original layer names in
+	var $doms = this.$element.find('[data-name="' + selector + '"],#' + selector);
+	return $doms.map(function() {
+		// and map to their according scene element rather than DOM elements
+		var element = $(this).data('sceneElement');
+		if(!element) {
+			var item = paper.project.getItem({ name: selector });
+			element = item.data.sceneElement = new sceneElement(item);
+			$(this).data('sceneElement', element);
+		}
+		return element;
+	}).get();
+};
+
+// (non-enumerable) getter to retrieve children of sceneElement as disassociative array
+Object.defineProperty(sceneElement.prototype, 'ordered', { enumerable: false,
+	get: function() {
+		return _.values(this);
+	}
+});
+
 /* create Danimator as main object and, at the same time, as shortcut to Danimator.animate */
 if(!this.Danimator) {
 	Danimator = function Danimator() { return Danimator.animate.apply(Danimator, arguments); };
@@ -17188,13 +17281,13 @@ Danimator.triggers = [];
 Object.defineProperty(Danimator, 'time', {
   get: function()     { return Danimator._time },
   set: function(secs) {
-  	Danimator._time = Math.max(secs, 0);						// limit seconds to positive value
+  	Danimator._time = Math.max(secs, 0);										// limit seconds to positive value
   	if(Danimator.onTimeChanged) Danimator.onTimeChanged(Danimator._time);		// call global hook everytime time gets changed
   	return Danimator;
   }
 });
 
-/* retrieve sceneElement from DOM element, jQuery element, Paper.js item or Danimator sceneElement */
+/* feed with DOM element, jQuery element, or Paper.js item and get associated sceneElement in return */
 Danimator.sceneElement = function danimatorSceneElement(element) {
 	if(element.className === 'sceneElement') return element;
 	if(element instanceof jQuery) return element.data('sceneElement');
@@ -17223,7 +17316,7 @@ Danimator.init = function danimatorInit(item) {
 	item.name = 'scene';
 
 	/* prep work: create scene abstraction off of imported item */
-	paper.scene = _createDanimatorScene(item);
+	paper.scene = new sceneElement(item);
 
 	// add empty (non-enumerable) symbols array to scene
 	Object.defineProperty(paper.scene, 'symbols', { enumerable: false, 
@@ -17455,7 +17548,6 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 		item = Danimator.sceneElement(item).item;
 	}
 
-	// ### TODO: change initVal here if necessary
 	/* setTimeout to cover delay parameter */
 	var aniTimeout = animations[item.id] = setTimeout(function() {
 		/* if this is the first time */
@@ -17635,97 +17727,6 @@ Danimator.morph = function danimatorMorph(fromItem, toItem, duration, options) {
 	});
 }
 
-var _createDanimatorScene = function(parent) {
-	var tree = {};
-
-	// save (non-enumerable) reference to Paper.js item
-	Object.defineProperty(tree, 'item', { enumerable: false, writable: false, configurable: false, 
-		value: 	parent 
-	});
-
-	// save (non-enumerable) name of class for Paper.js compatibility
-	Object.defineProperty(tree, 'className', { enumerable: false, writable: false, configurable: false, 
-		value: 	'sceneElement'
-	});
-
-	// add (non-enumerable) data holder
-	Object.defineProperty(tree, 'data', { enumerable: false,
-		value: 	{}
-	});
-	
-	// helper to find elements within other elements by name given in Illustrator (ignoring naming convention used in SVG)
-	Object.defineProperty(tree, 'find', { enumerable: false, writable: false, configurable: false, 
-		value: 	function(selector) {
-					// find in DOM by data-name, which is the attrib Illustrator saves the original layer names in
-					var $doms = this.$element.find('[data-name="' + selector + '"],#' + selector);
-					return $doms.map(function() {
-						// and map to their according scene element rather than DOM elements
-						var element = $(this).data('sceneElement');
-						if(!element) {
-							var item = paper.project.getItem({ name: selector });
-							element = item.data.sceneElement = _createDanimatorScene(item);
-							$(this).data('sceneElement', element);
-						}
-						return element;
-					}).get();
-				}
-	});
-
-	// (non-enumerable) getter to retrieve children as disassociative array
-	Object.defineProperty(tree, 'ordered', { enumerable: false,
-		get: function() {
-			return _.values(this);
-		}
-	});
-
-	// save (non-enumerable) reference to DOM element
-	if(parent.name) {
-		Object.defineProperty(tree, '$element', { enumerable: false, writable: false, configurable: false, 
-			value: 	parent.data.sceneRoot ? paper.$dom : paper.$dom && paper.$dom.find('#' + parent.name)
-		});
-	}
-
-	if(parent.children)
-		_.each(parent.children, function(child, childId) {
-
-			if(!child.name) {
-				child.name = 'element_' + child.id;
-				tree.$element.children(':eq(' + childId + ')').attr('id', child.name);
-			}
-
-			var $element = paper.$dom.find('#' + child.name);
-			var branch = _createDanimatorScene(child);
-
-			var originalName = String($element.data('name') || child.name);
-			var frameMatch;
-
-			// state detected!
-			if(originalName[0] === '#') {
-				if(!parent.data._states) parent.data._states = {};
-
-				originalName = originalName.slice(1);
-				parent.data._states[originalName] = child;
-
-				if(_.size(parent.data._states) > 1) { 
-					child.visible = false;
-				} else {
-					parent.data._state = parent.data._state || originalName;
-				}
-			// frame detected!
-			} else if(frameMatch = originalName.match(/^f(\d+)/)) {
-				var frame = parseInt(Number(frameMatch[1]));
-				parent.data._frames = Math.max(parent.data._frames || 1, frame);
-				if(frame > 1) child.visible = false;
-			}
-
-			$element.data('sceneElement', branch);
-			
-			tree[originalName] = branch;
-
-			child.data.sceneElement = branch;
-		});
-	return tree;
-};
 
 /* Paper.js injections */
 paper.Item.inject({
@@ -17853,12 +17854,16 @@ Danimator.Effectors = ['Magnet'];
 
 var _effectorDragging = false;
 
+/**
+ * Effector Base Class – Extend this to create specific effectors
+ */
 Danimator.Effector = function danimatorEffector(config) {
 	var self = this;
 
 	self._active 		= false;
 
 	self.name 			= 'Base';
+	self.className 		= 'Danimator.Effector';
 	self.magnitude 		= 0;
 	self.restitute 		= false;
 
@@ -17878,77 +17883,86 @@ Danimator.Effector = function danimatorEffector(config) {
 		}
 	};
 	self.visualizer = false;
-
-	self.init = function danimatorEffectorInit(config) {
-		if(config.restitute && (typeof config.restitute === 'boolean')) {
-			config.restitute = function(segment, oldPos) {
-				segment.restore();
-				segment.restituted = true;
-			}
-		}
-		if(_.get(config, 'settings.visualize')) {
-			if(config.position) {
-				self.icon = new paper.Raster({
-				    source: 	config.iconPath,
-				    position: 	config.position,
-				    scaling: 	.5
-				}).bringToFront();
-			}
-		}
-		return _.extend(self, config);
-	};
-
-	self.enable = function() {
-		self._active = true;
-		paper.view.on('frame', self.apply);									// attach frame handler to apply Effector
-		self.icon && (self.icon.position = self.position);
-		self.update();
-		return self;
-	};
-
-	self.disable = function() {
-		self._active = false;
-		paper.view.off('frame', self.apply);
-		self.visualizer && self.visualizer.remove();
-		return self;
-	};
-
-	self.redraw = function() {
-		if(self.visualizer) {
-			self.visualizer.on({
-				mouseenter: function(event) {
-								if(!event.event.buttons) {
-									self.visualizer.opacity = 1;
-								}
-							},
-				mouseleave: function(event) {
-								if(event.event.buttons || _effectorDragging) {
-									self.visualizer.opacity = 1;
-								} else {
-									self.visualizer.opacity = 0;
-								}
-							}
-			}).bringToFront();
-		}
-		return self;
-	};
-
-	self.update = function(event) {
-		self.settings.visualize && self.visualize && self.visualize();		// if visualize is set to true, call the hookself.visualize && self.visualize(event);
-		return self;
-	};
-
-	self.remove = function() {
-		self.visualizer && self.visualizer.remove();
-	};
-
-	self.bake = function() {
-		/*### TODO: bake new positions of segments */
-		self.remove();
-	};
-
 	return self.init(config);
 }
+
+Danimator.Effector.prototype.init = function danimatorEffectorInit(config) {
+	var self = this;
+	if(config.restitute && (typeof config.restitute === 'boolean')) {
+		config.restitute = function(segment, oldPos) {
+			segment.restore();
+			segment.restituted = true;
+		}
+	}
+	if(_.get(config, 'settings.visualize')) {
+		if(config.position) {
+			self.icon = new paper.Raster({
+			    source: 	config.iconPath,
+			    position: 	config.position,
+			    scaling: 	.5
+			}).bringToFront();
+		}
+	}
+	return _.extend(self, config);
+};
+
+Danimator.Effector.prototype.enable = function() {
+	var self = this;
+	var applyMethod = Danimator.Effector[this.name].apply;
+
+	if(applyMethod) {
+		this._active = true;
+		paper.view.on('frame', function(event) {
+			Danimator.Effector[self.name].apply.call(self, event);				// attach frame handler in order to apply Effector
+		});
+	}
+	this.icon && (this.icon.position = this.position);
+	this.update();
+	return this;
+};
+
+Danimator.Effector.prototype.disable = function() {
+	this._active = false;
+	paper.view.off('frame', this.apply);
+	this.visualizer && this.visualizer.remove();
+	return this;
+};
+
+Danimator.Effector.prototype.redraw = function() {
+	var self = this;
+	if(self.visualizer) {
+		self.visualizer.on({
+			mouseenter: function(event) {
+							if(!event.event.buttons) {
+								self.visualizer.opacity = 1;
+							}
+						},
+			mouseleave: function(event) {
+							if(event.event.buttons || _effectorDragging) {
+								self.visualizer.opacity = 1;
+							} else {
+								self.visualizer.opacity = 0;
+							}
+						}
+		}).bringToFront();
+	}
+	return self;
+};
+
+Danimator.Effector.prototype.update = function(event) {
+	var effectorClass = Danimator.Effector[this.name];
+	this.settings.visualize && effectorClass.visualize && effectorClass.visualize.call(this, event);		// if visualize is set to true, call the hook visualize(event);
+	return this;
+};
+
+Danimator.Effector.prototype.remove = function() {
+	this.visualizer && this.visualizer.remove();
+};
+
+Danimator.Effector.prototype.bake = function() {
+	/*### TODO: bake new positions of segments */
+	this.remove();
+};
 
 Danimator.Effector.elasticRestitution = _.throttle(function(factor) {
 	return function(segment, origPos) {
@@ -17978,160 +17992,108 @@ Danimator.Effector.elasticRestitution = _.throttle(function(factor) {
  * 									if not supplied ALL segments within radius will be transformed
  */
 Danimator.Effector.Magnet = function danimatorMagnetEffector(config) {
-	var self = new Danimator.Effector( _.extend({
+	return new Danimator.Effector( _.extend({
 		segmentGroups: 	[],
 		falloff: 		0,
 		position: 			new paper.Point(0,0),
 		radius: 		10
 	}, config, {
 		name: 			'Magnet',
+		className: 		'Danimator.Effector.Magnet',
 		iconPath: 		'http://res.cloudinary.com/dantheman/image/upload/v1498383905/effectors/magnet.png'
-	}));
+	}) );
+}
 
-	self.apply = function danimatorMagnetEffectorApply() {
+// is user manipulating the visualization of falloff?
+var _falloffDragging = false;
+// internal helper to create a segment overlay colorized by strength of the effect
+var _visualizeSegment = function danimatorMagnetEffectorSegmentVis(segmentPosition, strength) {
+	var segmentSize = 6/paper.project.view.zoom;
+	var segmentViz = new paper.Shape.Rectangle(segmentPosition.subtract(segmentSize/2), new paper.Size(segmentSize, segmentSize));
+	segmentViz.style = {
+		strokeWidth: 1/paper.project.view.zoom,
+		strokeColor: '#1193FF',
+		fillColor: new paper.Color({
+			hue: 		40 - 40 * strength,		// color from red to yellow
+			saturation: 1,
+			lightness: 	.5
+		}),
+	};
+	segmentViz.data.class = 'segmentViz';
+	this.visualizer && this.visualizer.addChild(segmentViz);
+	segmentViz.sendToBack();
+}
 
-		var affectedSegments = [];
+Danimator.Effector.Magnet.visualize = function danimatorMagnetEffectorVis(event) {
+	var self = this;
 
-		if(self.segmentGroups.length) {
-			if(self.affectedSegments) {							// if affectedSegments have been cached
-				affectedSegments = self.affectedSegments;		// take it from cache
-			} else {
-				_.each(self.segmentGroups, function(segments, itemId) {		// otherwise go thru groups
-					// if segmentGroup is set too boolean
-					if(typeof segments === 'boolean') {
-						if(segments) {	// get all segments of the segmentGroup's item
-							affectedSegments = affectedSegments.concat( paper.project.getItem({id: itemId}).segments );
-						}
-					} else {			// otherwise take the ones that have been passed thru
-						affectedSegments = affectedSegments.concat( segments );
-					}
-				});
-				self.affectedSegments = affectedSegments;		// store result in cache
-			}
-		} else {												// if no segmentGroups have been supplied
-			/*###TODO: fix "all" */
-			_.each(paper.project.hitTestAll(self.position, {
-				segments: 	true, 								// find ALL segments 
-				tolerance: 	self.radius, 						// within the radius
-				fill: 		false, 
-				stroke: 	false 
-			}), function(hitResult) {
-				if(hitResult.segment) {
-					affectedSegments.push( hitResult.segment );	// and add them to the affectedSegments
-				}
-			});
-		}
+	self.visualizer && self.visualizer.remove();
 
-		_.each(affectedSegments, function(segment) {
-			if(segment) {
-				var item = segment.path;
+	// this represents the radius indicator of the effector's viz
+	var radiusViz = new paper.Shape.Circle({
+		blendMode:  'overlay',
+		position: 	self.position, 
+		radius: 	self.radius,
+		style: 		self.styles.outline
+	});
 
-				if(!item.data._segmentPositions) {					
-					item.data._segmentPositions = [];
-				}
-				if(!item.data._segmentPositions[segment.index]) {						// if no previous positions have been stored for this segment …
-					item.data._segmentPositions[segment.index] = segment.point.clone();	// … save the current position
-					// attach handler for storing a segment's position
-					segment.store = function() {
-						this.path.data._segmentPositions[this.index] = this.point.clone();
-					}
-					// attach restore handler for restoring original position of paper.Segment instance
-					segment.restore = function() {
-						this.point = this.path.data._segmentPositions[this.index].clone();
-					}
-				}
-
-				var _segmentPosition = item.data._segmentPositions[segment.index];
-				var distance = _segmentPosition.getDistance(self.position);
-
-				if(distance < self.radius) {
-					var falloffRadius = self.radius * (1-self.falloff);
-					var power = self.falloff ? 1 - (distance - falloffRadius) / (self.radius - falloffRadius) : 1;
-					var strength = Math.min(power, 1) * self.magnitude;
-					var movement = _segmentPosition.subtract( self.position ).multiply( strength );
-
-					if(!strength && !segment.point.equals(_segmentPosition)) {
-						self.restitute && self.restitute(segment, _segmentPosition);
-						self.update();
-					} else {
-						segment.restituted = false;
-						segment.strength = strength;
-						segment.point = _segmentPosition.subtract( movement );	// calc new position relative to last stored position
-					}
-
-					if(self.settings.visualize) {
-						self.visualizeSegment(segment.point, Math.min(power, 1));
-					}
-				} else if(!segment.point.equals(_segmentPosition)) {
-					self.restitute && self.restitute(segment, _segmentPosition);
-					self.update();
-				}
-			}
-		});
-		paper.project.view.requestUpdate();
-	}
-
-	var _falloffDragging = false;
-
-	self.visualize = function danimatorMagnetEffectorVis(event) {
-
-		self.visualizer && self.visualizer.remove();
-
-		var radiusViz = new paper.Shape.Circle({
-			blendMode:  'overlay',
-			position: 	self.position, 
-			radius: 	self.radius,
-			style: 		self.styles.outline
-		});
-
-		var radiusCtrl = new paper.Shape.Circle({
-			name: 		'radiusCtrl',
-			position: 	(event && event.point) || self.position.subtract(new paper.Point(0, self.radius)),
-			radius: 	5 / paper.project.view.zoom,
-			style: 		self.styles.fill
-		});
-		radiusCtrl.onMouseDrag = function(event) {
+	// this represents the radius knob of the effector's viz
+	var radiusCtrl = new paper.Shape.Circle({
+		name: 		'radiusCtrl',
+		position: 	(event && event.point) || self.position.subtract(new paper.Point(0, self.radius)),
+		radius: 	5 / paper.project.view.zoom,
+		style: 		self.styles.fill
+	});
+	radiusCtrl.onMouseDrag = function(event) {
+		// wrapping in requestAnimationFrame() to enhance performance (see http://37signals.com/talks/soundslice at 35:40)
+		requestAnimationFrame(function() {
 			_effectorDragging = true;
 			radiusCtrl.position = event.point;
 			self.radius = event.point.getDistance(self.position);
 			self.update(event);
-		}
-		radiusCtrl.onMouseUp = function() {
-			_effectorDragging = false;
-		}
-		Danimator.handlers.attach(radiusCtrl, 'hover');
-
-		var positionSize = 10/paper.project.view.zoom;
-		var positionCtrl = new paper.Shape.Rectangle({
-			name: 		'positionCtrl',
-			opacity: 	0,
-			position: 	self.position.subtract(positionSize/2), 
-			size: 		new paper.Size(positionSize, positionSize),
-			style: 		self.styles.outline
 		});
-		positionCtrl.onMouseDrag = function(event) {
+	}
+	radiusCtrl.onMouseUp = function() {
+		_effectorDragging = false;
+	}
+	Danimator.handlers.attach(radiusCtrl, 'hover');
+
+	// this represents the position knob of the effector's viz
+	var positionSize = 10/paper.project.view.zoom;
+	var positionCtrl = new paper.Shape.Rectangle({
+		name: 		'positionCtrl',
+		opacity: 	0,
+		position: 	self.position.subtract(positionSize/2), 
+		size: 		new paper.Size(positionSize, positionSize),
+		style: 		self.styles.outline
+	});
+	positionCtrl.onMouseDrag = function(event) {
+		requestAnimationFrame(function() {
 			_effectorDragging = true;
 			ctrls.position = event.point;
 			self.position = event.point;
 			self.icon && (self.icon.position = event.point);
 			self.update();
-		}
-		positionCtrl.onMouseDown = function(event) {
-			self.magnitude = 1;
-		}
-		positionCtrl.onMouseUp = function(event) {
-			_effectorDragging = false;
-			self.magnitude = 0;
-		}
-		Danimator.handlers.attach(positionCtrl, 'hover');
-
-		var fallfoffCtrl = new paper.Shape.Circle({
-			name: 		'falloffCtrl',
-			position: 	self.position.subtract(new paper.Point(0, -self.radius * self.falloff)),
-			radius: 	5 / paper.project.view.zoom,
-			style: 		self.styles.outline
 		});
-		fallfoffCtrl.onMouseDrag = function(event) {
+	}
+	positionCtrl.onMouseDown = function(event) {
+		self.magnitude = 1;
+	}
+	positionCtrl.onMouseUp = function(event) {
+		_effectorDragging = false;
+		self.magnitude = 0;
+	}
+	Danimator.handlers.attach(positionCtrl, 'hover');
+
+	// this represents the falloff knob of the effector's viz
+	var fallfoffCtrl = new paper.Shape.Circle({
+		name: 		'falloffCtrl',
+		position: 	self.position.subtract(new paper.Point(0, -self.radius * self.falloff)),
+		radius: 	5 / paper.project.view.zoom,
+		style: 		self.styles.outline
+	});
+	fallfoffCtrl.onMouseDrag = function(event) {
+		requestAnimationFrame(function() {
 			fallfoffCtrl.position = paper.Point.max(event.point, self.position);
 			self.falloff = event.point.getDistance(self.position) / self.radius;
 
@@ -18139,53 +18101,122 @@ Danimator.Effector.Magnet = function danimatorMagnetEffector(config) {
 			_effectorDragging = true;
 
 			self.update();
-		}
-		fallfoffCtrl.onMouseUp = function() {
-			_falloffDragging = false;
-			_effectorDragging = false;
-			radiusViz.style = self.styles.outline;
-		}
-		Danimator.handlers.attach(fallfoffCtrl, 'hover');
-
-		if(_falloffDragging) {
-			var fill = new paper.Color(self.styles.fill.fillColor);
-
-			radiusViz.fillColor = {
-				origin: 		[0,0],
-				destination: 	[self.radius,0],
-				gradient: {
-					stops: [[fill.fade(0.5), Danimator.limit(1-self.falloff, 0, 1)], [fill.fade(0), 1]],
-					radial: true
-				}
-			};
-		}
-
-		var ctrls = new paper.Group([radiusViz, positionCtrl, fallfoffCtrl, radiusCtrl]);
-		ctrls.bringToFront();
-
-		self.visualizer = ctrls;
-		self.redraw();
-		return self;
+		});
 	}
+	fallfoffCtrl.onMouseUp = function() {
+		_falloffDragging = false;
+		_effectorDragging = false;
+		radiusViz.style = self.styles.outline;
+	}
+	Danimator.handlers.attach(fallfoffCtrl, 'hover');
 
-	self.visualizeSegment = function danimatorMagnetEffectorSegmentVis(segmentPosition, strength) {
-		var segmentSize = 6/paper.project.view.zoom;
-		var segmentViz = new paper.Shape.Rectangle(segmentPosition.subtract(segmentSize/2), new paper.Size(segmentSize, segmentSize));
-		segmentViz.style = {
-			strokeWidth: 1/paper.project.view.zoom,
-			strokeColor: '#1193FF',
-			fillColor: new paper.Color({
-				hue: 		40 - 40 * strength,
-				saturation: 1,
-				lightness: 	.5
-			}),
+	// create a gradient to visualize falloff while changing it interactively
+	if(_falloffDragging) {
+		var fill = new paper.Color(self.styles.fill.fillColor);
+
+		radiusViz.fillColor = {
+			origin: 		[0,0],
+			destination: 	[self.radius,0],
+			gradient: {
+				stops: [[fill.fade(0.5), Danimator.limit(1-self.falloff, 0, 1)], [fill.fade(0), 1]],
+				radial: true
+			}
 		};
-		segmentViz.data.class = 'segmentViz';
-		self.visualizer && self.visualizer.addChild(segmentViz);
-		segmentViz.sendToBack();
 	}
 
+	var ctrls = new paper.Group([radiusViz, positionCtrl, fallfoffCtrl, radiusCtrl]);
+	ctrls.bringToFront();
+
+	self.visualizer = ctrls;
+	self.redraw();
 	return self;
+}
+
+Danimator.Effector.Magnet.apply = function danimatorMagnetEffectorApply() {
+	var self = this;
+	var affectedSegments = [];
+
+	if(self.segmentGroups.length) {
+		if(self.affectedSegments) {							// if affectedSegments have been cached
+			affectedSegments = self.affectedSegments;		// take it from cache
+		} else {
+			_.each(self.segmentGroups, function(segments, itemId) {		// otherwise go thru groups
+				// if segmentGroup is set too boolean
+				if(typeof segments === 'boolean') {
+					if(segments) {	// get all segments of the segmentGroup's item
+						affectedSegments = affectedSegments.concat( paper.project.getItem({id: itemId}).segments );
+					}
+				} else {			// otherwise take the ones that have been passed thru
+					affectedSegments = affectedSegments.concat( segments );
+				}
+			});
+			self.affectedSegments = affectedSegments;		// store result in cache
+		}
+	} else {												// if no segmentGroups have been supplied
+		/*###TODO: fix "all" */
+		_.each(paper.project.hitTestAll(self.position, {
+			segments: 	true, 								// find ALL segments 
+			tolerance: 	self.radius, 						// within the radius
+			fill: 		false, 
+			stroke: 	false 
+		}), function(hitResult) {
+			if(hitResult.segment) {
+				affectedSegments.push( hitResult.segment );	// and add them to the affectedSegments
+			}
+		});
+	}
+
+	_.each(affectedSegments, function(segment) {
+		if(segment) {
+			var item = segment.path;
+
+			if(!item.data._segmentPositions) {					
+				item.data._segmentPositions = [];
+			}
+			if(!item.data._segmentPositions[segment.index]) {						// if no previous positions have been stored for this segment …
+				item.data._segmentPositions[segment.index] = segment.point.clone();	// … save the current position
+				// attach handler for storing a segment's position
+				segment.store = function() {
+					this.path.data._segmentPositions[this.index] = this.point.clone();
+				}
+				// attach restore handler for restoring original position of paper.Segment instance
+				segment.restore = function() {
+					this.point = this.path.data._segmentPositions[this.index].clone();
+				}
+			}
+
+			var _segmentPosition = item.data._segmentPositions[segment.index];
+			var distance = _segmentPosition.getDistance(self.position);
+
+			// only if segments are within radius
+			if(distance < self.radius) {
+				var falloffRadius = self.radius * (1-self.falloff);
+				var power = self.falloff ? 1 - (distance - falloffRadius) / (self.radius - falloffRadius) : 1;
+				var strength = Math.min(power, 1) * self.magnitude;
+				var movement = _segmentPosition.subtract( self.position ).multiply( strength );
+
+				// if segment isn't affected but not on it's original position either
+				if(!strength && !segment.point.equals(_segmentPosition)) {
+					// trigger restitution step and pass it our segment and its original position
+					self.restitute && self.restitute(segment, _segmentPosition);
+					self.update();
+				} else {
+					// otherwise reset restitution and affect!
+					segment.restituted = false;
+					segment.strength = strength;
+					segment.point = _segmentPosition.subtract( movement );	// calc new position relative to last stored position
+				}
+
+				if(self.settings.visualize) {
+					_visualizeSegment.call(self, segment.point, Math.min(power, 1));
+				}
+			} else if(!segment.point.equals(_segmentPosition)) {
+				self.restitute && self.restitute(segment, _segmentPosition);
+				self.update();
+			}
+		}
+	});
+	paper.project.view.requestUpdate();
 }
 
 /*

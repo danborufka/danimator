@@ -23,7 +23,7 @@ This means that if you have an SVG with a group named `bear` containing a path c
 ```js
 scene.bear.snout
 ```
-To change the opacity of `snout`'s Paper.js item, you'd do:
+To change the opacity of `snout`'s [Paper.js item](http://paperjs.org/reference/item/), you'd do:
 ```js
 scene.bear.snout.item.opacity = 0.5;
 ```
@@ -39,7 +39,7 @@ sceneElements store two representations that can be accessed as properties:
 
 property | description
 -|-
-**.item** | Reference to the rendered Paper.js item
+**.item** | Reference to the rendered [Paper.js item](http://paperjs.org/reference/item/)
 **.$element** | Reference to the jQuery element of the SVG as parsed DOM
 
 ____
@@ -86,7 +86,7 @@ onLoop | _Function_ | If you supplied a String to onDone, this provides a callb
 
 argument | data type | description | example
 -|-|-|-
-element | [_sceneElement_](#sceneelement) or _paper.Item_ | The sceneElement (or Paper.js item) to be animated | scene.bear
+element | [_sceneElement_](#sceneelement) or [_paper.Item_](http://paperjs.org/reference/item/) | The sceneElement (or Paper.js item) to be animated | scene.bear
 property | _String_| The property to be animated | "opacity"
 from | _String_ or _Number_| Start value of the animation. Use null to use the current value | 0.5
 to | _String_ or _Number_ | End value of the animation. Numeric Strings yield in relative addition/subtraction (like "+10" will yield the current value + 10) | 1
@@ -98,8 +98,8 @@ A handler with the following properties:
 
 property | data type | description
 -|-|-
-then | _Function_ | shortcut for Danimator.then(…)
-options | _Object_ | original options passed to Danimator.animate(…)
+then | _Function_ | shortcut for [Danimator.then](#danimator-then)(…)
+options | _Object_ | original options passed to [Danimator.animate](#danimator-animate)(…)
 stop | _Function_ | used to prevent delayed animation from happening
 ___
 
@@ -110,7 +110,7 @@ ___
 argument | data type | description | example
 -|-|-|-
 animationMethod | _String_ or _Function_ | The Danimator method to be used or a callback to be called after the animation has finished | "animate"
-[…] | If animationMethod is 'animate', all following parameters correspond to the ones you'd pass to Danimator.animate)
+[…] | If animationMethod is 'animate', all following parameters correspond to the ones you'd pass to [Danimator.animate](#danimator-animate))
 
 #### Returns
-Whatever the according animation method would return – most times a [Danimator handler](#returns) itself for easier chaining.
+Whatever the according animation method would return – most times a [Danimator handler](#returns) for easier chaining.
