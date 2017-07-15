@@ -1168,7 +1168,7 @@ jQuery(function($){
 							if(_playing) {
 								if(Danimator.time >= Danimator.maxDuration) {
 									currentGame.scene.item.off('frame', _updateTime);
-									Danimator._activeSound.wave.stop();
+									Danimator._activeSound && Danimator._activeSound.wave.stop();
 									Danimator.time = 0;
 									_playing = false;
 								} else {
@@ -1176,7 +1176,7 @@ jQuery(function($){
 								}
 							} else {
 								currentGame.scene.item.off('frame', _updateTime);
-								Danimator._activeSound.wave.pause();
+								Danimator._activeSound && Danimator._activeSound.wave.pause();
 							}
 						}
 
@@ -1184,7 +1184,7 @@ jQuery(function($){
 							lastTime = (new Date).getTime() / 1000 - Danimator.time;
 							// attach frame handler _updateTime
 							currentGame.scene.item.on('frame', _updateTime);
-							Danimator._activeSound.wave.play();
+							Danimator._activeSound && Danimator._activeSound.wave.play();
 						} else {
 							// detach frame handler _updateTime
 							currentGame.scene.item.off('frame', _updateTime);
