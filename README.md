@@ -3,7 +3,13 @@ Advanced scalable vector graphics animations/interactions based on Paper.js
 
 ![scr-danimator-examples-1](https://user-images.githubusercontent.com/8395474/27254790-489d37b6-5390-11e7-89e2-8a3765e140e5.gif)
 
-## Usage
+## The What and the Why
+
+Paper.js is great for interactive manipulation of paths, but it becomes tiresome when it comes to organic animations.
+Danimator solves that by providing intuitive abstractions to both [time- and frame-based animations](), [shape morphing](), [blazing fast DOM traversal](), [sound creation](), and much more.
+Let's bring back the power of proper vector animations to the browser!
+
+## Quick Start
 
 Start by importing an **SVG** like so:
 ```js
