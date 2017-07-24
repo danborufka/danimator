@@ -1120,6 +1120,7 @@ function _getTimeline(property, track) {
 		ranges: 		track.properties[property],
 		slug: 			slug,
 		track: 			track,
+		type: 			track.item.className,
 		getTrigger: 	function(range) { 
 			if(_normalizeTrigger(range.caller).length) {
 				return ' triggered';
