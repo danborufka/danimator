@@ -17248,7 +17248,6 @@ sceneElement.prototype.data = {};
 
 /* helper to find elements within elements (by original name or name given during export) */
 sceneElement.prototype.find = function(selector) {
-	return false;
 	// find in DOM by data-name, which is the attrib Illustrator saves the original layer names in
 	var $doms = this.$element.find('[data-name="' + selector + '"],#' + selector);
 	return $doms.map(function() {
