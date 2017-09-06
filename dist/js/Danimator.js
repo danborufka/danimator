@@ -17178,14 +17178,14 @@ try {
 var animations = [];
 
 /**
- * sceneElement class
+ * SceneElement class
  * for easy access to a Paper.js item's: 
  * - children
  * - DOM correspondant (in the SVG DOM tree)
  * - states
  * - frames
  */
-function sceneElement(parent) {
+function SceneElement(parent) {
 	var self = this;
 
 	// save (non-enumerable) reference to Paper.js item
@@ -17200,6 +17200,11 @@ function sceneElement(parent) {
 		});
 	}
 
+	// (non-enumerable) data store
+	Object.defineProperty(self, 'data', { enumerable: false, writable: true, configurable: true, 
+		value: 	{}
+	});
+
 	if(parent.children) {
 		_.each(parent.children, function(child, childId) {
 
@@ -17209,10 +17214,12 @@ function sceneElement(parent) {
 			}
 
 			var $element = paper.$dom.find('#' + child.name);
-			var branch = new sceneElement(child);
+			var branch = new SceneElement(child);
 
 			var originalName = String($element.data('name') || child.name);
 			var frameMatch;
+
+			Danimator.runHooks('sceneElement-setup', branch);
 
 			// state detected!
 			if(originalName[0] === '#') {
@@ -17243,11 +17250,10 @@ function sceneElement(parent) {
 
 	return self;
 }
-sceneElement.prototype.className = 'sceneElement';
-sceneElement.prototype.data = {};
+SceneElement.prototype.className = 'SceneElement';
 
 /* helper to find elements within elements (by original name or name given during export) */
-sceneElement.prototype.find = function(selector) {
+SceneElement.prototype.find = function(selector) {
 	// find in DOM by data-name, which is the attrib Illustrator saves the original layer names in
 	var $doms = this.$element.find('[data-name="' + selector + '"],#' + selector);
 	return $doms.map(function() {
@@ -17255,15 +17261,15 @@ sceneElement.prototype.find = function(selector) {
 		var element = $(this).data('sceneElement');
 		if(!element) {
 			var item = paper.project.getItem({ name: selector });
-			element = item.data.sceneElement = new sceneElement(item);
+			element = item.data.sceneElement = new SceneElement(item);
 			$(this).data('sceneElement', element);
 		}
 		return element;
 	}).get();
 };
 
-// (non-enumerable) getter to retrieve children of sceneElement as disassociative array
-Object.defineProperty(sceneElement.prototype, 'ordered', { enumerable: false,
+// (non-enumerable) getter to retrieve children of SceneElement as disassociative array
+Object.defineProperty(SceneElement.prototype, 'ordered', { enumerable: false,
 	get: function() {
 		return _.values(this);
 	}
@@ -17275,6 +17281,7 @@ if(!this.Danimator) {
 }
 Danimator._time = 0;
 Danimator.triggers = [];
+Danimator.hooks = {};
 
 /* adding time getter/setter to Danimator */
 Object.defineProperty(Danimator, 'time', {
@@ -17286,13 +17293,30 @@ Object.defineProperty(Danimator, 'time', {
   }
 });
 
-/* feed with DOM element, jQuery element, or Paper.js item and get associated sceneElement in return */
+/* feed with DOM element, jQuery element, or Paper.js item and get associated SceneElement in return */
 Danimator.sceneElement = function danimatorSceneElement(element) {
-	if(element.className === 'sceneElement') return element;
+	if(element.className === 'SceneElement') return element;
 	if(element instanceof jQuery) return element.data('sceneElement');
 	if(element instanceof HTMLElement) return $(element).data('sceneElement');
 	return _.get(element, 'data.sceneElement');
 }
+
+Danimator.addHook = function danimatorAddHook(name, action) {
+  if(!_.has(Danimator.hooks, name)) {
+    Danimator.hooks[name] = [];
+  }
+  Danimator.hooks[name].push(action);
+};
+
+Danimator.runHooks = function danimatorRunHooks(name, value) {
+  var res = value;
+  if(_.has(Danimator.hooks, name)) {
+    _.each(Danimator.hooks[name], function(hook) {
+      res = hook(res);
+    });
+  }
+  return res;
+};
 
 /** 
  * data helper: limit number between two boundaries
@@ -17315,7 +17339,7 @@ Danimator.init = function danimatorInit(item) {
 	item.name = 'scene';
 
 	/* prep work: create scene abstraction off of imported item */
-	paper.scene = new sceneElement(item);
+	paper.scene = new SceneElement(item);
 
 	// add empty (non-enumerable) symbols array to scene
 	Object.defineProperty(paper.scene, 'symbols', { enumerable: false, 
@@ -17336,7 +17360,7 @@ Danimator.init = function danimatorInit(item) {
 	return Danimator;
 }
 
-/* imports an SVG using Paper.js and turns it into a Danimator sceneElement */
+/* imports an SVG using Paper.js and turns it into a Danimator SceneElement */
 Danimator.import = function DanimatorImport(svgPath, optionsOrOnLoad) {
 	var _options = {};
 	var _onLoad;
@@ -17543,7 +17567,7 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 		}
 	}
 
-	if(item.className === 'sceneElement') {
+	if(item.className === 'SceneElement') {
 		item = Danimator.sceneElement(item).item;
 	}
 
@@ -17715,9 +17739,9 @@ Danimator.morph = function danimatorMorph(fromItem, toItem, duration, options) {
 
 						/* calculate and apply new position and tangents of segments */
 						if(segment && toSegment) {
-							segment.point = 	fromSegment.point.add( 		toSegment.point.subtract( 		fromSegment.point ).multiply(progress) );
-							segment.handleIn = 	fromSegment.handleIn.add( 	toSegment.handleIn.subtract( 	fromSegment.handleIn ).multiply(progress) );
-							segment.handleOut = fromSegment.handleOut.add( 	toSegment.handleOut.subtract( 	fromSegment.handleOut ).multiply(progress) );
+							segment.point 		= fromSegment.point.add( 		toSegment.point.subtract( 		fromSegment.point ).multiply(progress) );
+							segment.handleIn 	= fromSegment.handleIn.add( 	toSegment.handleIn.subtract( 	fromSegment.handleIn ).multiply(progress) );
+							segment.handleOut 	= fromSegment.handleOut.add( 	toSegment.handleOut.subtract( 	fromSegment.handleOut ).multiply(progress) );
 						}
 					});
 				});
@@ -17844,6 +17868,72 @@ Danimator.startTime 	= (new Date).getTime();		// when did Danimator get initiali
 Danimator.removeClip 	= true;						// if there's a clipping mask on the whole scene auto-remove it
 
 var _scriptQuery = _.last(document.getElementsByTagName('script')).src.replace(/^[^\?]+\??/,'');;
+/** 
+ * Helper method to bend elements along a path
+ * depends on:
+ * - a group called "bendables" with all paths to be bent
+ * - a path called "spine" that determines the length and will be hidden on runtime
+ */
+
+// Hooking into sceneElement setup to prepare all elements within groups called "bendables"
+Danimator.addHook('sceneElement-setup', function(elItem) {
+	if(elItem.bendables) {
+		var item 	= elItem.item;
+		var stiffs 	= _.without(_.values(elItem), elItem.bendables);
+
+		// get all "stiff" children and store delta to element's center
+		_.each(stiffs, function(elStiffo) {
+			elStiffo.data._bendableDistance = elStiffo.item.position.subtract(item.position);
+		});
+
+		elItem.spine.item.visible = false;
+
+		// get all bendable's segments and store delta to element's center
+		_.each(elItem.bendables, function(elBendable) {
+			elBendable.data._bendableSegments = [];
+			_.each(elBendable.item.segments, function(segment, i) {
+				elBendable.data._bendableSegments[i] = segment.point.subtract(item.position);
+			});
+		});
+	}
+});
+
+paper.Item.inject({
+	bendAlongPath: function(moPath, onPath, extend, curvatureScale) {
+		var elThis = this.data.sceneElement;
+		var stiffs 	= _.without(_.values(elThis), elThis.bendables);
+		var moPath_length = moPath.length;
+
+		// rotate & place non-bendables into place
+		_.each(stiffs, function(elStiffo) {
+			var _stiffOffset = Danimator.limit( (onPath || 0) + elStiffo.data._bendableDistance.x * (1 + extend), 0, moPath_length );
+			var _yOffset 	 = moPath.getNormalAt( _stiffOffset ).multiply(elStiffo.data._bendableDistance.y);
+
+			 elStiffo.item.position = moPath.getPointAt(  _stiffOffset );
+			 elStiffo.item.rotation = moPath.getNormalAt( _stiffOffset ).angle;
+		});
+
+		// bends all bendables of an item into place
+		_.each(elThis.bendables, function(elBendable) {
+			var bendable = elBendable.item;
+			_.each(elBendable.data._bendableSegments, function(_centerOffset, i) {
+				var _segmentOffset 	= Danimator.limit( onPath + _centerOffset.x * (1 + extend), 0, moPath_length );
+				var _yOffset 		= moPath.getNormalAt( _segmentOffset ).multiply(_centerOffset.y);
+				var _point			= moPath.getPointAt(  _segmentOffset );
+				var _scale 			= curvatureScale || .2;												// for down-scaling of tangents
+
+				//bendable.fullySelected = true;
+
+				if(_point) {
+					bendable.segments[i].point 		= _point.add(new paper.Point(0, _yOffset));
+					bendable.segments[i].handleIn 	= moPath.getWeightedTangentAt( _segmentOffset ).multiply(_scale);
+					bendable.segments[i].handleOut 	= moPath.getWeightedTangentAt( _segmentOffset ).multiply(-1 * _scale);
+				}
+			});
+			bendable.smooth();
+		});
+	}
+});;
 /** 
  * Local effectors (similar to effectors in Cinema4D)
  */
@@ -18285,6 +18375,7 @@ paper.Item.inject({
 	*/
 	attachToPath: function(stroke, offset) {
 		this.detachFromPath(stroke);
+		this.data._originalPosition = this.position.clone();
 
 		this.data._master = stroke;
 		if(!stroke.data._slaves) {
@@ -18294,11 +18385,14 @@ paper.Item.inject({
 
 		this.offsetOnPath = offset || 0;
 	},
-	detachFromPath: function(stroke) {
-		if(this.data._master) {
+	detachFromPath: function() {
+		var stroke = this.data._master;
+		if(stroke.data._slaves) {
 			// remove from old master
-			this.data._master.data._slaves = _.without(this.data._master.data._slaves, this);
+			stroke.data._slaves = _.without(stroke.data._slaves, this);
+			this.position = this.data._originalPosition;
 		}
+		delete this.data._master;
 	},
 
 	/* property to get/set an item's offset on its motion path */
@@ -18312,7 +18406,7 @@ paper.Item.inject({
 		var len  = offset * path.length;
 
 		this.position = path.getPointAt(len);
-		this.rotation = path.getNormalAt(len).angle-90;
+		this.rotation = path.getNormalAt(len).angle;
 		this.data._offsetOnPath = offset;
 	},
 

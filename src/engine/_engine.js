@@ -14,14 +14,14 @@ try {
 var animations = [];
 
 /**
- * sceneElement class
+ * SceneElement class
  * for easy access to a Paper.js item's: 
  * - children
  * - DOM correspondant (in the SVG DOM tree)
  * - states
  * - frames
  */
-function sceneElement(parent) {
+function SceneElement(parent) {
 	var self = this;
 
 	// save (non-enumerable) reference to Paper.js item
@@ -36,6 +36,11 @@ function sceneElement(parent) {
 		});
 	}
 
+	// (non-enumerable) data store
+	Object.defineProperty(self, 'data', { enumerable: false, writable: true, configurable: true, 
+		value: 	{}
+	});
+
 	if(parent.children) {
 		_.each(parent.children, function(child, childId) {
 
@@ -45,10 +50,12 @@ function sceneElement(parent) {
 			}
 
 			var $element = paper.$dom.find('#' + child.name);
-			var branch = new sceneElement(child);
+			var branch = new SceneElement(child);
 
 			var originalName = String($element.data('name') || child.name);
 			var frameMatch;
+
+			Danimator.runHooks('sceneElement-setup', branch);
 
 			// state detected!
 			if(originalName[0] === '#') {
@@ -79,11 +86,10 @@ function sceneElement(parent) {
 
 	return self;
 }
-sceneElement.prototype.className = 'sceneElement';
-sceneElement.prototype.data = {};
+SceneElement.prototype.className = 'SceneElement';
 
 /* helper to find elements within elements (by original name or name given during export) */
-sceneElement.prototype.find = function(selector) {
+SceneElement.prototype.find = function(selector) {
 	// find in DOM by data-name, which is the attrib Illustrator saves the original layer names in
 	var $doms = this.$element.find('[data-name="' + selector + '"],#' + selector);
 	return $doms.map(function() {
@@ -91,15 +97,15 @@ sceneElement.prototype.find = function(selector) {
 		var element = $(this).data('sceneElement');
 		if(!element) {
 			var item = paper.project.getItem({ name: selector });
-			element = item.data.sceneElement = new sceneElement(item);
+			element = item.data.sceneElement = new SceneElement(item);
 			$(this).data('sceneElement', element);
 		}
 		return element;
 	}).get();
 };
 
-// (non-enumerable) getter to retrieve children of sceneElement as disassociative array
-Object.defineProperty(sceneElement.prototype, 'ordered', { enumerable: false,
+// (non-enumerable) getter to retrieve children of SceneElement as disassociative array
+Object.defineProperty(SceneElement.prototype, 'ordered', { enumerable: false,
 	get: function() {
 		return _.values(this);
 	}
@@ -111,6 +117,7 @@ if(!this.Danimator) {
 }
 Danimator._time = 0;
 Danimator.triggers = [];
+Danimator.hooks = {};
 
 /* adding time getter/setter to Danimator */
 Object.defineProperty(Danimator, 'time', {
@@ -122,13 +129,30 @@ Object.defineProperty(Danimator, 'time', {
   }
 });
 
-/* feed with DOM element, jQuery element, or Paper.js item and get associated sceneElement in return */
+/* feed with DOM element, jQuery element, or Paper.js item and get associated SceneElement in return */
 Danimator.sceneElement = function danimatorSceneElement(element) {
-	if(element.className === 'sceneElement') return element;
+	if(element.className === 'SceneElement') return element;
 	if(element instanceof jQuery) return element.data('sceneElement');
 	if(element instanceof HTMLElement) return $(element).data('sceneElement');
 	return _.get(element, 'data.sceneElement');
 }
+
+Danimator.addHook = function danimatorAddHook(name, action) {
+  if(!_.has(Danimator.hooks, name)) {
+    Danimator.hooks[name] = [];
+  }
+  Danimator.hooks[name].push(action);
+};
+
+Danimator.runHooks = function danimatorRunHooks(name, value) {
+  var res = value;
+  if(_.has(Danimator.hooks, name)) {
+    _.each(Danimator.hooks[name], function(hook) {
+      res = hook(res);
+    });
+  }
+  return res;
+};
 
 /** 
  * data helper: limit number between two boundaries
@@ -151,7 +175,7 @@ Danimator.init = function danimatorInit(item) {
 	item.name = 'scene';
 
 	/* prep work: create scene abstraction off of imported item */
-	paper.scene = new sceneElement(item);
+	paper.scene = new SceneElement(item);
 
 	// add empty (non-enumerable) symbols array to scene
 	Object.defineProperty(paper.scene, 'symbols', { enumerable: false, 
@@ -172,7 +196,7 @@ Danimator.init = function danimatorInit(item) {
 	return Danimator;
 }
 
-/* imports an SVG using Paper.js and turns it into a Danimator sceneElement */
+/* imports an SVG using Paper.js and turns it into a Danimator SceneElement */
 Danimator.import = function DanimatorImport(svgPath, optionsOrOnLoad) {
 	var _options = {};
 	var _onLoad;
@@ -379,7 +403,7 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 		}
 	}
 
-	if(item.className === 'sceneElement') {
+	if(item.className === 'SceneElement') {
 		item = Danimator.sceneElement(item).item;
 	}
 
@@ -551,9 +575,9 @@ Danimator.morph = function danimatorMorph(fromItem, toItem, duration, options) {
 
 						/* calculate and apply new position and tangents of segments */
 						if(segment && toSegment) {
-							segment.point = 	fromSegment.point.add( 		toSegment.point.subtract( 		fromSegment.point ).multiply(progress) );
-							segment.handleIn = 	fromSegment.handleIn.add( 	toSegment.handleIn.subtract( 	fromSegment.handleIn ).multiply(progress) );
-							segment.handleOut = fromSegment.handleOut.add( 	toSegment.handleOut.subtract( 	fromSegment.handleOut ).multiply(progress) );
+							segment.point 		= fromSegment.point.add( 		toSegment.point.subtract( 		fromSegment.point ).multiply(progress) );
+							segment.handleIn 	= fromSegment.handleIn.add( 	toSegment.handleIn.subtract( 	fromSegment.handleIn ).multiply(progress) );
+							segment.handleOut 	= fromSegment.handleOut.add( 	toSegment.handleOut.subtract( 	fromSegment.handleOut ).multiply(progress) );
 						}
 					});
 				});

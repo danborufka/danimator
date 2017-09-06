@@ -52,6 +52,7 @@ paper.Item.inject({
 	*/
 	attachToPath: function(stroke, offset) {
 		this.detachFromPath(stroke);
+		this.data._originalPosition = this.position.clone();
 
 		this.data._master = stroke;
 		if(!stroke.data._slaves) {
@@ -61,11 +62,14 @@ paper.Item.inject({
 
 		this.offsetOnPath = offset || 0;
 	},
-	detachFromPath: function(stroke) {
-		if(this.data._master) {
+	detachFromPath: function() {
+		var stroke = this.data._master;
+		if(stroke.data._slaves) {
 			// remove from old master
-			this.data._master.data._slaves = _.without(this.data._master.data._slaves, this);
+			stroke.data._slaves = _.without(stroke.data._slaves, this);
+			this.position = this.data._originalPosition;
 		}
+		delete this.data._master;
 	},
 
 	/* property to get/set an item's offset on its motion path */
@@ -79,7 +83,7 @@ paper.Item.inject({
 		var len  = offset * path.length;
 
 		this.position = path.getPointAt(len);
-		this.rotation = path.getNormalAt(len).angle-90;
+		this.rotation = path.getNormalAt(len).angle;
 		this.data._offsetOnPath = offset;
 	},
 
