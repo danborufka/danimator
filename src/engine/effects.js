@@ -1,16 +1,12 @@
 /** 
- * Effects and their effectors for paperJS items
+ * Skeleton class for effects for paperJS items
  */
 
 Danimator.Effect = paper.Base.extend({
 		_class: 	'Effect',
 		_affected: 	[],
 
-		initialize: function Effect() {
-
-		},
-
-		_initialize: function(arg) {
+		initialize: function Effect(arg) {
 			console.log('initializing!', arg);
 		}
 	}, 
@@ -22,22 +18,29 @@ Danimator.Effect = paper.Base.extend({
 		},
 		setActive: 	function(active) {
 			return this._active = active;
-		},
-
-		getAffected: function() {
-			return this._affected;
-		},
-		setAffected: function(affected) {
-			return this._affected = affected;	
 		}
 	}
 );
+
+paper.Item.inject({
+	beans: false,
+	_effects: {},
+	addEffect: 		function(fx) {
+		this._effects[fx.name] = fx;
+	},
+	hasEffect: 		function(fx) {
+		!!this._effects[fx];
+	},
+	effect: 	 function(fx) {
+		return this._effects[fx];
+	}
+});
 
 /**
  * MotionPath Effect
  */
 
-// Hooking into sceneElement setup to prepare all elements within groups called "bendables"
+// First hook into sceneElement setup (see _engine.js) to prepare all elements within groups called "bendables"
 Danimator.addHook('sceneElement-setup', function(elItem) {
 	if(elItem.bendables) {
 		var item 	= elItem.item;
@@ -185,17 +188,3 @@ Danimator.Effect.MotionPath = function(path, affected, options) {
 
 	return motionPath.effect('motionPath');
 };
-
-paper.Item.inject({
-	beans: false,
-	_effects: {},
-	addEffect: 		function(fx) {
-		this._effects[fx.name] = fx;
-	},
-	hasEffect: 		function(fx) {
-		!!this._effects[fx];
-	},
-	effect: 	 function(fx) {
-		return this._effects[fx];
-	}
-});
