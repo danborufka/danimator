@@ -512,6 +512,11 @@ var _HOVER_STYLES = {
 		opacity: 	 1,
 		strokeWidth: 0,
 		fillColor: 	 '#009dec'
+	},
+	INSPECTION: {
+		strokeWidth: 0,
+		fillColor: 	 '#009dec',
+		opacity: 	 .3
 	}
 };
 
@@ -788,8 +793,22 @@ jQuery(function($){
 	$time 			 = _PANELS.animations.$element.find('.description time');
 	$animationValue  = _PANELS.animations.$element.find('.description output');
 
+	var _viz;
+
 	$(document)
 		/* layer-specific events */
+		.on('mouseenter', '.panel .layer', function(event) {
+			var item = Danimator.sceneElement(this).item;
+			_viz && _viz.remove();
+
+			if(item.visible) {
+				_viz = new paper.Path.Rectangle(item.strokeBounds);
+				_viz.set(_HOVER_STYLES.INSPECTION);
+			}
+		})
+		.on('mouseleave', '.panel .layer', function(event) {
+			_viz && _viz.remove();
+		})
 		.on('click', '.panel .layer', function(event) {
 			$(this).trigger($.Event('selected', {
 				handpicked: true,
@@ -1270,23 +1289,25 @@ jQuery(function($){
 		})
 		/* time control with cmdKey + mousewheelX */
 		.on('mousewheel', function(event) {
-			// wrapping in requestAnimationFrame() to enhance performance (see http://37signals.com/talks/soundslice at 35:40)
-			requestAnimationFrame(function() {
-				if(event.metaKey) {
-					var delta = { x: event.originalEvent.deltaX, y: event.originalEvent.deltaY };
+			if(event.metaKey) {
+				// wrapping in requestAnimationFrame() to enhance performance (see http://37signals.com/talks/soundslice at 35:40)
+				requestAnimationFrame(function() {
+					if(event.metaKey) {
+						var delta = { x: event.originalEvent.deltaX, y: event.originalEvent.deltaY };
 
-					if(Math.abs(delta.x) > 0.1) {
-						var time = Danimator.time + delta.x * 1/24;
-						if(event.shiftKey) {
-							time = _snapKeyframes.snap(time);
+						if(Math.abs(delta.x) > 0.1) {
+							var time = Danimator.time + delta.x * 1/24;
+							if(event.shiftKey) {
+								time = _snapKeyframes.snap(time);
+							}
+							Danimator.time = time;
 						}
-						Danimator.time = time;
 					}
-				}
-			});
-			event.preventDefault();
-			event.stopImmediatePropagation();
-			return false;
+				});
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				return false;
+			}
 		})
 		// file dropping 
 		.on('dragover', 'body', function(event) { 

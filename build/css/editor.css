@@ -1,3 +1,4 @@
+/* color vars */
 /* basic CSS reset */
 html, body {
   margin: 0;
@@ -136,6 +137,8 @@ canvas[resize] {
     padding: 0 5px; }
   .panel .layer {
     cursor: pointer; }
+    .panel .layer:hover {
+      background-color: rgba(255, 242, 204, 0.77); }
     .panel .layer.hidden {
       opacity: .5; }
       .panel .layer.hidden .visible:before {

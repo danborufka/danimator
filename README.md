@@ -15,7 +15,7 @@ Start by importing an **SVG** like so:
 ```js
 Danimator.import(svg, options);
 ```
-This will use [Paper.js to parse the SVG to canvas](http://paperjs.org/reference/project/#importsvg-svg), rename the imported group to [`scene`](#scene), and create a [`sceneElement`](#sceneelement) for it. The second parameter accepts a map with an _onLoad_ property to be executed once the SVG has been imported. You can also pass the callback directly as second param. onLoad will retrieve the parsed [scene](#scene) as parameter.
+This will use [Paper.js to parse the SVG to canvas](http://paperjs.org/reference/project/#importsvg-svg), rename the imported group to [`scene`](#scene), and create a [`SceneElement`](#sceneelement) for it. The second parameter accepts a map with an _onLoad_ property to be executed once the SVG has been imported. You can also pass the callback directly as second param. onLoad will retrieve the parsed [scene](#scene) as parameter.
 ```js
 Danimator.import(svg, (scene) => scene.bear.item.strokeColor = 'yellow');
 ```
@@ -40,7 +40,7 @@ scene.bear.ordered[0];  // this will access bear's first child
 This setup also walks thru all SVG elements, [normalizes their names](#normalized-element-names), and hides all detected [states](#states) and [frames](#frames) except for the first one.
 
 
-### sceneElement
+### SceneElement
 sceneElements store two representations that can be accessed as properties:
 
 property | description
@@ -49,9 +49,9 @@ property | description
 **.$element** | Reference to the jQuery element of the SVG as parsed DOM
 
 ____
-Both `item` and `$element` have references to this `sceneElement` in their data property.
+Both `item` and `$element` have references to this `SceneElement` in their data property.
 
-element | access to sceneElement
+element | access to SceneElement
 -|-
 item | **.data.sceneElement**
 $element | **.data('sceneElement')**
@@ -60,12 +60,12 @@ ____
 … but you can always just use the helper method `Danimator.sceneElement( anyItem )` to retrieve its according `sceneElement` (if one exists)
 ____
 
-sceneElement **.find** is a helper to find deeply nested elements within elements:
+SceneElement **.find** is a helper to find deeply nested elements within elements:
  ```js
 scene.bear.find("eyebrow-left").visible = false;
 ```
 
-Every sceneElement has a data store for easy data passing between jQuery elements and items inside PaperScript:
+Every SceneElement has a data store for easy data passing between jQuery elements and items inside PaperScript:
 ```js
 scene.bear.data.hungriness = 0.8;
 ```
@@ -92,7 +92,7 @@ onLoop | _Function_ | If you supplied a String to onDone, this provides a callb
 
 argument | data type | description | example
 -|-|-|-
-element | [_sceneElement_](#sceneelement) or [_paper.Item_](http://paperjs.org/reference/item/) | The sceneElement (or Paper.js item) to be animated | scene.bear
+element | [_sceneElement_](#sceneelement) or [_paper.Item_](http://paperjs.org/reference/item/) | The SceneElement (or Paper.js item) to be animated | scene.bear
 property | _String_| The property to be animated | "opacity"
 from | _String_ or _Number_| Start value of the animation. Use null to use the current value | 0.5
 to | _String_ or _Number_ | End value of the animation. Numeric Strings yield in relative addition/subtraction (like "+10" will yield the current value + 10) | 1

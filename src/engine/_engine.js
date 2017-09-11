@@ -80,6 +80,18 @@ function SceneElement(parent) {
 			
 			self[originalName] = branch;
 
+			Object.defineProperty(branch, 'id', { enumerable: false, writable: false, configurable: false, 
+				value: 	child.name 
+			});
+
+			Object.defineProperty(branch, 'name', { enumerable: false, writable: false, configurable: false, 
+				value: 	originalName 
+			});
+
+			Object.defineProperty(branch, 'parent', { enumerable: false, writable: false, configurable: false, 
+				value: 	self 
+			});
+
 			child.data.sceneElement = branch;
 		});
 	}
@@ -104,6 +116,18 @@ SceneElement.prototype.find = function(selector) {
 	}).get();
 };
 
+SceneElement.prototype.toString = function() {
+	var self = this;
+	var path = '';
+
+	while(self = self.parent) {
+		if(self.name) {
+			path = self.name + '.' + path;
+		}
+	}
+	return '[SceneElement ' + path + this.name + ']';
+}
+
 // (non-enumerable) getter to retrieve children of SceneElement as disassociative array
 Object.defineProperty(SceneElement.prototype, 'ordered', { enumerable: false,
 	get: function() {
@@ -113,7 +137,12 @@ Object.defineProperty(SceneElement.prototype, 'ordered', { enumerable: false,
 
 /* create Danimator as main object and, at the same time, as shortcut to Danimator.animate */
 if(!this.Danimator) {
-	Danimator = function Danimator() { return Danimator.animate.apply(Danimator, arguments); };
+	Danimator = function Danimator() { 
+		if(typeof arguments[0] === 'string') {
+			return Danimator.import.apply(Danimator, arguments);
+		}
+		return Danimator.animate.apply(Danimator, arguments); 
+	};
 }
 Danimator._time = 0;
 Danimator.triggers = [];
@@ -198,11 +227,11 @@ Danimator.init = function danimatorInit(item) {
 
 /* imports an SVG using Paper.js and turns it into a Danimator SceneElement */
 Danimator.import = function DanimatorImport(svgPath, optionsOrOnLoad) {
-	var _options = {};
+	var _options = { expandShapes: true };
 	var _onLoad;
 
 	if(typeof optionsOrOnLoad === 'object') {		// if second argument is a map
-		_options = optionsOrOnLoad;
+		_.extend(_options, optionsOrOnLoad);
 		_onLoad = optionsOrOnLoad.onLoad;
 	} else {										// if second argument is a function
 		_onLoad = optionsOrOnLoad;
@@ -278,6 +307,10 @@ Danimator.step = function danimatorStep(animatable, progress) {
 					value >= animatable.to : 
 					value <= animatable.to;
 	var newValue;
+
+	if(progress >= 1) {
+		isDone = true;
+	}
 
 	if(Danimator.interactive) {
 		isDone = false;

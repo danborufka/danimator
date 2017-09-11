@@ -1,3 +1,8 @@
+/* color vars */
+$bright-honey: 			rgba(255, 242, 204, 0.77);
+$panel-hover-color: 	$bright-honey;
+
+
 /* basic CSS reset */
 html,body { 
 	margin: 0;
@@ -169,6 +174,9 @@ canvas[resize] 			{
 
 	.layer 				{
 							cursor: 				pointer;
+		&:hover 		{
+							background-color: 		$panel-hover-color;
+		}					
 		&.hidden 		{
 							opacity: 				.5;
 			.visible:before {

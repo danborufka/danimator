@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Test</title>
+	<style>
+		body { margin:0; margin-top: 100px; padding: 0; }; canvas { border: 1px solid crimson; }
+		input[type=range] 	{	width: 100%; position: fixed; bottom: 10px;	}
+	</style>
+</head>
+<body>
+	<canvas id="test" width="1458.16" height="267.25" style="height:100%; max-width: 100%"></canvas>
+	<input id="bendAlongPath" type="range" min="0" max="100" step="0.1" value="50">
+	<script src="js/jquery-1.11.3.min.js"></script>
+	<!-- <script src="js/paper-full.min.js"></script> -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.11.4/paper-full.js"></script>
+	<script src="../dist/js/Danimator.js"></script>
+	<script type="text/paperscript" data-paper-canvas="test">
+		Danimator('marketing-sausage.svg', function() {
+			var elScene = this;
+			var _viz;
+
+			elScene.motionPath.item.reverse();
+			elScene.find("head")[0].item.transform((new Matrix).rotate(90));	// prebaked rotation-hack
+
+			paper.view.zoom = .75;
+			paper.view.center += [200, 0];
+
+			//$('#test').width('100%');
+
+			Danimator.Effect.MotionPath({
+				path: 		elScene.motionPath,
+				affected: 	[elScene.sausage],
+				bent: 		true,
+				offset: 	.5
+			});
+
+			var $input = $('#bendAlongPath')
+				.on('input', function(event) {
+					var factor = $(this).val() / 100;
+
+					elScene.item.data._bent = factor * 100;
+
+					_viz && _viz.remove();
+
+					if(factor > 0) {
+						_viz = elScene.motionPath.item.clone();
+
+						_viz.selectedColor  = 'crimson';
+						_viz.strokeWidth 	= 1;
+						_viz.opacity 		= .5;
+						_viz.fullySelected  = true;
+						_viz.sendToBack();
+
+						if(factor < 1) {
+							_viz.splitAt(factor * elScene.motionPath.item.length).remove();
+						}
+					}
+					elScene.sausage.item.motionPath.offset = factor * elScene.motionPath.item.length;
+				})
+				.on('mouseenter', function(event) {
+					Danimator.stopAll(elScene.item);
+				})
+				.on('mouseleave', function(event) {
+					Danimator
+						.stopAll(elScene.item)
+						.animate(elScene.item, 'data._bent', elScene.item.data._bent || 0, 100, 5, {
+							easing: Ease.cubicInOut,
+							onDone: function() {
+								Danimator
+									.stopAll(elScene.item)
+									.animate(elScene.item, 'data._bent', 0, 100, 10, {
+										easing: Ease.cubicInOut,
+										onDone: 'loop',
+										onStep: function(bend) {
+											$input.val(bend).trigger('input');
+										}
+									});
+							},
+							onStep: function(bend) {
+								$input.val(bend).trigger('input');
+							}
+						});
+				})
+				.trigger('input').trigger('mouseleave');
+
+			var hit;
+
+			paper.view
+				.on('mousedown', function(event) {
+					hit = elScene.motionPath.item.hitTest( event.point, { segments: true, handles: true, stroke: true });
+					elScene.motionPath.item.fullySelected = !!hit;
+				})
+				.on('mouseup', function(event) {
+					elScene.motionPath.item.fullySelected = hit = false;
+				})
+				.on('mousedrag', function(event) {
+					if(hit) {
+						switch(hit.type) {
+							case 'segment':
+								elScene.hls.ordered[1].item.segments[hit.segment.index].point = hit.segment.point = event.point;
+								break;
+							case 'handle-in':
+								elScene.hls.ordered[1].item.segments[hit.segment.index].handleIn = hit.segment.handleIn = event.point - hit.segment.point;
+								break;
+							case 'handle-out':
+								elScene.hls.ordered[1].item.segments[hit.segment.index].handleOut = hit.segment.handleOut = event.point - hit.segment.point;	
+								break;
+						}
+						$input.trigger('input');
+					}
+				});
+		});
+	</script>
+</body>
+</html>
