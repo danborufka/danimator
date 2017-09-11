@@ -62,3 +62,6 @@ server/
 
 # ignore all dirs starting with underscore
 _*/
+
+# ignore IDEA related files
+.idea
