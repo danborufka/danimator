@@ -319,6 +319,7 @@ Danimator.step = function danimatorStep(animatable, progress) {
 	if(isDone) {
 		if(animatable.property === 'frame')
 			animatable.item.data._playing = false;
+		_.set(animatable.item, animatable.property, animatable.to);
 	} else {
 		var _isStringAnimation = (typeof animatable.from === 'string');
 
