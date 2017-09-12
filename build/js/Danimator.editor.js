@@ -918,7 +918,7 @@ jQuery(function($){
 		.on('input', '.zoom', function(event) {
 			var zoom = Danimator.limit($(this).val(), 1, 100)/100;
 			var minZoom = 5;
-			var maxZoom = 60;
+			var maxZoom = 150;
 
 			TIME_FACTOR = _linearTolog(1-zoom, minZoom, maxZoom);
 			$(this).attr('title', parseInt(10 + (TIME_FACTOR-minZoom) / (maxZoom-minZoom) * 190) + '%');
@@ -934,7 +934,6 @@ jQuery(function($){
 		})
 		/* timeline handling */
 		.on('mousedown', '.timeline .track', function(event) {
-
 			if($(event.target).is('.keyframe')) {
 				_frameDragging = true;
 			}
@@ -996,7 +995,7 @@ jQuery(function($){
 				var $this 	= $(this);
 				var track 	= $this.closest('li.item').data('track');
 				var item 	= track.item;
-				var property 	= $this.closest('li.timeline').data('property');
+				var property = $this.closest('li.timeline').data('property');
 				var value 	= _.get(item, property);
 
 				Danimator(item, property, value, value, duration, { delay: Danimator.time });
@@ -1856,7 +1855,7 @@ Game.onLoad = function(project, name, options) {
 	}
 
 	Danimator.onTimeChanged = function danimatorTimeChanged(time) {
-		/* update all scrubbes */
+		/* update all scrubbers */
 		$('.timeline .scrubber').each(function(){
 			var $scrubber 	 = $(this);
 			var sceneElement = Danimator.sceneElement($scrubber.closest('li.item'));

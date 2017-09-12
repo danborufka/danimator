@@ -18319,6 +18319,8 @@ var _bendAlongPath = function _bendAlongPath(elItem, moPath, onPath, curvatureSc
 	var stiffs 	= _.without(_.values(elItem), elItem.bendables);
 	var moPath_length = moPath.length;
 
+	onPath *= moPath_length;
+
 	// rotate & place non-bendables into place
 	_.each(stiffs, function(elStiffo) {
 		var _stiffOffset = Danimator.limit( (onPath || 0) + elStiffo.data._bendableDistance.x, 0, moPath_length );
@@ -18350,9 +18352,10 @@ var _bendAlongPath = function _bendAlongPath(elItem, moPath, onPath, curvatureSc
 Danimator.Effect.MotionPathEffect = paper.Base.extend({
 		_class: 	'Effect.MotionPath',
 		_bent: 		false,
+		_orient: 	true,
 		_offset: 	0,
 
-		item: 		null,
+		element:	null,
 		path: 		null,
 
 		initialize: function MotionPathEffect(config) {
@@ -18368,9 +18371,24 @@ Danimator.Effect.MotionPathEffect = paper.Base.extend({
 		},
 		setOffset: 	function(offset) {
 			if(this.bent) {
-				_bendAlongPath(this.item, this.path.item, offset);
+				_bendAlongPath(this.element, this.path.item, offset);
+			} else {
+				var moPath = Danimator.sceneElement(this.path).item;
+				var pos = offset * moPath.length;
+
+				this.element.item.position = moPath.getPointAt( pos );
+				if(this.orient) {
+					this.element.item.rotation = moPath.getNormalAt( pos ).angle;
+				}
 			}
 			return this._offset = (offset || 0);
+		},
+		getOrient: 	function() {
+			return this._orient;
+		},
+		setOrient: 	function(orient) {
+			this._orient = orient;
+			this.offset *= 1;	
 		},
 		getBent: 	function() {
 			return !!this._bent;
@@ -18431,10 +18449,10 @@ Danimator.Effect.MotionPath = function(path, affected, options) {
 	
 	_.each(affected, function(item) {
 		item.motionPath = new Danimator.Effect.MotionPathEffect({
-			item: 	Danimator.sceneElement(item),
-			path: 	config.path,
-			offset: config.offset || 0,
-			bent: 	!!config.bent
+			element: 	Danimator.sceneElement(item),
+			path: 		config.path,
+			offset: 	config.offset || 0,
+			bent: 		!!config.bent
 		});
 	});
 
