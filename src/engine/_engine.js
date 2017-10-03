@@ -13,6 +13,13 @@ try {
 
 var animations = [];
 
+var _defProp = function(element, prop, value) {
+	return Object.defineProperty(element, prop, {
+		enumerable: false, writable: false, configurable: false, 
+		value: 	value
+	});
+}
+
 /**
  * SceneElement class
  * for easy access to a Paper.js item's: 
@@ -25,21 +32,15 @@ function SceneElement(parent) {
 	var self = this;
 
 	// save (non-enumerable) reference to Paper.js item
-	Object.defineProperty(self, 'item', { enumerable: false, writable: false, configurable: false, 
-		value: 	parent 
-	});
+	_defProp(self, 'item', parent);
 
 	// save (non-enumerable) reference to DOM element
 	if(parent.name) {
-		Object.defineProperty(self, '$element', { enumerable: false, writable: false, configurable: false, 
-			value: 	parent.data.sceneRoot ? paper.$dom : paper.$dom && paper.$dom.find('#' + parent.name)
-		});
+		_defProp(self, '$element', parent.data.sceneRoot ? paper.$dom : paper.$dom && paper.$dom.find('#' + parent.name));
 	}
 
 	// (non-enumerable) data store
-	Object.defineProperty(self, 'data', { enumerable: false, writable: true, configurable: true, 
-		value: 	{}
-	});
+	_defProp(self, 'data', {});
 
 	if(parent.children) {
 		_.each(parent.children, function(child, childId) {
@@ -80,17 +81,9 @@ function SceneElement(parent) {
 			
 			self[originalName] = branch;
 
-			Object.defineProperty(branch, 'id', { enumerable: false, writable: false, configurable: false, 
-				value: 	child.name 
-			});
-
-			Object.defineProperty(branch, 'name', { enumerable: false, writable: false, configurable: false, 
-				value: 	originalName 
-			});
-
-			Object.defineProperty(branch, 'parent', { enumerable: false, writable: false, configurable: false, 
-				value: 	self 
-			});
+			_defProp(branch, 'id', 		child.name);
+			_defProp(branch, 'name', 	originalName);
+			_defProp(branch, 'parent', 	self);
 
 			child.data.sceneElement = branch;
 		});
@@ -198,6 +191,10 @@ Danimator.limit = function(nr, mi, ma) {
 	return Math.max(Math.min(nr, ma), mi);
 }
 
+Danimator.lerp = function(factor, lbound, ubound) {
+	return Danimator.limit(lbound + (ubound - lbound) * factor, lbound, ubound);
+}
+
 /* initializes a Danimator scene from the passed item and creates index of symbol defs */
 Danimator.init = function danimatorInit(item) {
 	item.data.sceneRoot = true;
@@ -207,9 +204,7 @@ Danimator.init = function danimatorInit(item) {
 	paper.scene = new SceneElement(item);
 
 	// add empty (non-enumerable) symbols array to scene
-	Object.defineProperty(paper.scene, 'symbols', { enumerable: false, 
-		value: 	[] 
-	});
+	_defProp(paper.scene, 'symbols', []);
 
 	if(Danimator.removeClip) {				// if removeClip option is set to true (default)
 		if(item.firstChild.clipMask) {		// and the first child of the scene is a clipping mask
@@ -290,8 +285,11 @@ Danimator.trigger = function danimatorTrigger(name) {
 /* calculate single step of animation */
 Danimator.step = function danimatorStep(animatable, progress) {
 	var value = _.get(animatable.item, animatable.property);
+	var isDone = (progress >= 1) && !Danimator.interactive;
+	var newValue;
 
-	if(animatable.from == undefined) 		animatable.from = value;
+	if(animatable.from == undefined) 
+		animatable.from = value;
 
 	switch(typeof animatable.to) {
 		case 'string': 														// if animatable.to is a String
@@ -301,27 +299,13 @@ Danimator.step = function danimatorStep(animatable, progress) {
 			break;
 	}
 
-	var ascending = animatable.to > animatable.from;	// check whether values are animated ascending or descending
-	var range 	  = animatable.to - animatable.from;	// calculate range of animation values
-	var isDone 	  = ascending ? 
-					value >= animatable.to : 
-					value <= animatable.to;
-	var newValue;
-
-	if(progress >= 1) {
-		isDone = true;
-	}
-
-	if(Danimator.interactive) {
-		isDone = false;
-	}
-
 	if(isDone) {
 		if(animatable.property === 'frame')
 			animatable.item.data._playing = false;
 		_.set(animatable.item, animatable.property, animatable.to);
 	} else {
-		var _isStringAnimation = (typeof animatable.from === 'string');
+		var _isColor = animatable.property.match(/[Cc]olor$/g);
+		var _isStringAnimation = !_isColor && (typeof animatable.from === 'string');
 
 		if(_isStringAnimation) {
 			animatable.options.easing = 'constant';			// animation of strings can only be interpolated as constant keyframes for now
@@ -344,9 +328,14 @@ Danimator.step = function danimatorStep(animatable, progress) {
 				isDone = Danimator.interactive;
 			}
 			newValue = [animatable.from, animatable.to][progress];
+		} else if(_isColor) {
+			if(typeof animatable.from === 'string') {
+				animatable.from = new paper.Color(animatable.from);
+			}
+			newValue = animatable.from.mix(animatable.to, progress);
 		} else {
 			/* calculate new value and limit to "from" and "to" */
-			newValue = Danimator.limit(animatable.from + (range * progress), animatable.from, animatable.to);
+			newValue = Danimator.lerp(progress, animatable.from, animatable.to);
 		}
 
 		/* animatable onStep hook to intervene on every step */
@@ -384,6 +373,8 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 		function _animateFrame(event) {
 			var item = this;
 
+			Danimator.animating = true;
+
 			/* walk thru array of props to animate */
 			_.each(item.data._animate, function(animatable) {
 				if(animatable) {
@@ -393,6 +384,7 @@ Danimator.animate = function danimatorAnimate(item, property, fr, to, duration, 
 					var range 	  = Math.abs(animatable.to - animatable.from);
 
 					if(animation.done) {
+						Danimator.animating = false;
 						/* remove animatable entry from said animate array */
 						_.pull(item.data._animate, animatable);
 
@@ -660,62 +652,26 @@ paper.Item.inject({
 	},
 	/* state capability – switch visibility of children layers on and off using meaningful labels */
 	getState: function() {
-		// accept childname as first argument (but do it in hindsight for Paper.js to pickup getter and setter properly)
-		if(typeof arguments[0] === 'string') {
-			return _.get(this.data, '_state.' + arguments[0], false);
-		}
-		return this.data._state || {};
+		return this.data._state || '';
 	},
 	// example: bear.state = 'snout.open';
 	// 			will show layer #open of bear's childrens starting with "snout" (so snout-1, snout-2, …) 
 	// 			and hide all its siblings
 	setState: function(state) {
 		var self = this;
-		var childname;
+		var states = self.getStates();								// retrieve all states
 
-		if(typeof state === 'object') {
-			return _.each(state, function(currentState, name) {
-				self.setState(name + '.' + currentState);
-			});
+		if(self.data._state === undefined) {
+			self.data._state = _.keys(states)[0];					// set default state to first key of states object
+		} 
+
+		if(self.data._state) {
+			states[self.data._state].visible = false;				// hide current state if there is one
 		}
 
-		// if this is the state of a subelement
-		if(state.indexOf('.') > -1) {
-			state = state.split('.');
-			childname = state[0] + '';
-			state = state.slice(1).join('.');
-		}
+		states[state].visible = true;								// and show newly set state instead
+		self.data._state = state;
 
-		if(childname) {
-			self.data._state = self.data._state || {};
-			self.data._state[childname] = state;
-
-			var element = Danimator.sceneElement(self);
-			var parent;
-
-			if(self.frames === 1) {										// if we don't have several frames
-				parent = element;										// search the whole element
-			} else {
-				parent = element['f' + self.frame];						// otherwise narrow search down to current frame for better performance
-			}
-
-			return _.each(parent.find(childname), function(child) {
-						child.item.setState(state);						// and change their state
-					});
-		} else {
-			var states = self.getStates();								// retrieve all states
-
-			if(self.data._state === undefined) {
-				self.data._state = _.keys(states)[0];					// set default state to first key of states object
-			} 
-
-			if(self.data._state) {
-				states[self.data._state].visible = false;				// hide current state if there is one
-			}
-
-			states[state].visible = true;								// and show newly set state instead
-			self.data._state = state;
-		}
 		self.data.onStateChanged && self.data.onStateChanged(state, childname);
 		return self;
 	},
@@ -729,6 +685,19 @@ paper.Color.inject({
 		var faded = this.clone();
 		faded.alpha = value;
 		return faded;
+	},
+	mix: function(color2, progress) {
+		progress = _.defaultTo(progress, .5);
+		color2   = new paper.Color(color2);
+
+		var newColor = this.clone();
+
+		newColor.red = Danimator.lerp(progress, newColor.red, color2.red);
+		newColor.green = Danimator.lerp(progress, newColor.green, color2.green);
+		newColor.blue = Danimator.lerp(progress, newColor.blue, color2.blue);
+		newColor.alpha = Danimator.lerp(progress, newColor.alpha, color2.alpha);
+
+		return newColor;
 	}
 });
 

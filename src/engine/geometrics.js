@@ -37,18 +37,6 @@ paper.Path.inject({
 });
 
 paper.Item.inject({
-	/* 	normalizing rotation property of items
-		so you can set an absolute rotation instead of just rotating incrementally
-		e.g.: item.rotation = 180 && item.rotation = 180 // will only rotate it once
-	*/
-	getRotation: function() {
-		return _.get(this.data, '_rotation', 0);
-	},
-	setRotation: function(angle, center) {
-		this.rotate(angle-_.get(this.data, '_rotation', 0), center);
-		this.data._rotation = angle;
-	},
-
 	/* 	attach element to motion path and move it along it by changing item.offsetOnPath (0…1)
 	*/
 	attachToPath: function(stroke, offset) {
